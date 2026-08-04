@@ -63,9 +63,33 @@ export interface Refinements {
 
 export interface RootUsage {
   root: Root
-  /** The part of the stem that actually survived into the name. */
+  /** The segment cut out of the stem — before the join had its say. */
   contribution: string
   position: 'head' | 'tail'
+  /**
+   * The same segment as it actually reads in the finished name. Usually identical to
+   * `contribution`; different when the seam ate a letter — *sophia* + *aletheia* meet on
+   * one "a", so one of them contributes a segment it does not fully keep. Optional
+   * because a remote service may not track its joins this closely.
+   */
+  surface?: string
+}
+
+/**
+ * One piece of the finished name, and where it came from.
+ *
+ * The parts concatenate back into the name, which is the point: a derivation you cannot
+ * add up is a story, not a working. `kind: 'link'` marks letters that belong to neither
+ * root — a vowel spent to open a join, or one added so the name lands somewhere English
+ * can end a word.
+ */
+export interface DerivationPart {
+  text: string
+  kind: 'root' | 'link'
+  /** Set when kind is 'root'. */
+  rootId?: string
+  /** How to name this piece in the panel: 'root', 'suffix', 'linking vowel'. */
+  label: string
 }
 
 export interface GeneratedName {
@@ -79,6 +103,11 @@ export interface GeneratedName {
   meaning: string
   /** Prose describing what the join actually did — elision, linking vowel, trimming. */
   blendNote: string
+  /**
+   * The name spelled out as its parts, in order. Optional: a remote service that cannot
+   * show its working simply omits it, and the panel falls back to the roots alone.
+   */
+  derivation?: DerivationPart[]
   roots: RootUsage[]
   syllables: number
   variants: string[]

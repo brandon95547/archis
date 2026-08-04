@@ -150,6 +150,7 @@ function toGeneratedName(entry: Scored): GeneratedName {
     interpretation: shortInterpretation(head, tail, blend.name),
     meaning: fullMeaning(head, tail, blend.name),
     blendNote: blend.note,
+    derivation: blend.derivation,
     roots: [blend.head, blend.tail],
     syllables: syllableCount(blend.name),
     variants: spellingVariants(blend.name).map(titleCase),

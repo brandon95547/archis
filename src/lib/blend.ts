@@ -1,4 +1,4 @@
-import type { Root, RootUsage } from '../types'
+import type { DerivationPart, Root, RootUsage } from '../types'
 import {
   endsInVowel, isVowel, lastVowelOf, linkingVowel, repairClusters, startsWithVowel,
   syllabify, units,
@@ -21,6 +21,8 @@ export interface Blend {
   name: string
   head: RootUsage
   tail: RootUsage
+  /** The name spelled out as its parts, in order. Adds back up to `name`. */
+  derivation: DerivationPart[]
   /** What the join actually did, in one sentence. */
   note: string
 }
@@ -75,7 +77,12 @@ function tails(stem: string): string[] {
 }
 
 interface Join {
-  text: string
+  /** Head letters that survive the seam. */
+  head: string
+  /** Letters owed to neither root — the vowel spent to open the join. Usually empty. */
+  link: string
+  /** Tail letters that survive the seam. */
+  tail: string
   note: string
 }
 
@@ -85,6 +92,11 @@ interface Join {
  * The four cases are the whole of it: two vowels meeting, two consonants meeting, and the
  * two mixed cases which need nothing. Returns null when the pieces simply will not join —
  * better to lose a candidate than to force one.
+ *
+ * Returns the three pieces rather than the finished word, because the panel has to be able
+ * to say which letters came from which root and which came from the join itself. A joiner
+ * that only hands back a string forces the explanation to be reverse-engineered, and a
+ * reverse-engineered derivation is a guess.
  */
 function join(head: string, tail: string): Join | null {
   const headEndsVowel = endsInVowel(head)
@@ -97,15 +109,25 @@ function join(head: string, tail: string): Join | null {
     if (a === b) {
       // The same vowel twice is one vowel. This is the join that reads as a single word
       // rather than two: *sophia* + *aletheia* meeting on their shared "a".
-      return { text: head + tail.slice(1), note: `the shared "${a}" is spent once, closing the seam` }
+      return {
+        head,
+        link: '',
+        tail: tail.slice(1),
+        note: `the shared "${a}" is spent once, closing the seam`,
+      }
     }
     // Two different vowels: keep the pair when English already reads it as one sound,
     // otherwise drop the weaker first one.
     const diphthongs = ['ae', 'ai', 'au', 'ea', 'ei', 'eo', 'ia', 'ie', 'io', 'oa', 'oe', 'ou', 'ua', 'ue']
     if (diphthongs.includes(a + b)) {
-      return { text: head + tail, note: `"${a}" and "${b}" fall together as one sound` }
+      return { head, link: '', tail, note: `"${a}" and "${b}" fall together as one sound` }
     }
-    return { text: head.slice(0, -1) + tail, note: `the trailing "${a}" gives way to "${b}"` }
+    return {
+      head: head.slice(0, -1),
+      link: '',
+      tail,
+      note: `the trailing "${a}" gives way to "${b}"`,
+    }
   }
 
   // ── consonant meets consonant ────────────────────────────────────────────
@@ -116,22 +138,23 @@ function join(head: string, tail: string): Join | null {
     const easy = ['nt', 'nd', 'st', 'sk', 'sp', 'rt', 'rd', 'rn', 'rm', 'rs', 'lt', 'ld',
       'ln', 'lm', 'ms', 'ns', 'ndr', 'mbr', 'str', 'thr', 'nth', 'rth', 'lth', 'sth']
     if (easy.includes(seam) || easy.some((s) => direct.includes(s))) {
-      return { text: direct, note: `"${seam}" is a join the mouth already makes` }
+      return { head, link: '', tail, note: `"${seam}" is a join the mouth already makes` }
     }
     // Otherwise open it with a vowel harmonised to the head.
     const vowel = linkingVowel(lastVowelOf(head))
     return {
-      text: repairClusters(head + vowel + tail),
+      head,
+      link: vowel,
+      tail,
       note: `a linking "${vowel}" opens the join, taking its colour from the vowel before it`,
     }
   }
 
   // ── one of each: nothing to negotiate ────────────────────────────────────
-  const text = repairClusters(head + tail)
-  if (text !== head + tail) {
-    return { text, note: 'the join was eased where the consonants crowded' }
-  }
-  return { text, note: 'the two pieces meet cleanly, vowel to consonant' }
+  const note = repairClusters(head + tail) !== head + tail
+    ? 'the join was eased where the consonants crowded'
+    : 'the two pieces meet cleanly, vowel to consonant'
+  return { head, link: '', tail, note }
 }
 
 /**
@@ -150,10 +173,14 @@ export function blendRoots(head: Root, tail: Root): Blend[] {
       const joined = join(h, t)
       if (!joined) continue
 
-      let name = joined.text
+      let name = repairClusters(joined.head + joined.link + joined.tail)
       // A name is a word, not a stem: give it a vowel to land on if it ends somewhere
       // English does not.
-      if (/[jqvwc]$/.test(name)) name += linkingVowel(lastVowelOf(name))
+      let terminal = ''
+      if (/[jqvwc]$/.test(name)) {
+        terminal = linkingVowel(lastVowelOf(name))
+        name += terminal
+      }
       if (name.length < 4 || name.length > 12) continue
       if (seen.has(name)) continue
       seen.add(name)
@@ -171,10 +198,24 @@ export function blendRoots(head: Root, tail: Root): Blend[] {
             ? `${tail.form} was cut back to "${t}"`
             : 'Both roots kept their full stems'
 
+      // The name, spelled out as its parts. Every letter is accounted for and attributed,
+      // including the ones no root paid for.
+      const derivation: DerivationPart[] = [
+        { text: joined.head, kind: 'root', rootId: head.id, label: 'root' },
+      ]
+      if (joined.link) {
+        derivation.push({ text: joined.link, kind: 'link', label: 'linking vowel' })
+      }
+      derivation.push({ text: joined.tail, kind: 'root', rootId: tail.id, label: 'suffix' })
+      if (terminal) {
+        derivation.push({ text: terminal, kind: 'link', label: 'closing vowel' })
+      }
+
       out.push({
         name,
-        head: { root: head, contribution: h, position: 'head' },
-        tail: { root: tail, contribution: t, position: 'tail' },
+        head: { root: head, contribution: h, surface: joined.head, position: 'head' },
+        tail: { root: tail, contribution: t, surface: joined.tail, position: 'tail' },
+        derivation,
         note: `${trimNote}, then ${joined.note}.`,
       })
     }
