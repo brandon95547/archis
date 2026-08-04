@@ -1,0 +1,135 @@
+@import 'tailwindcss';
+
+/*
+ * Archis — a reading surface, not a dashboard.
+ *
+ * The palette is warm neutral rather than blue-grey: these are old words, and a cold
+ * interface makes them look like database rows. Everything is built from a single ink
+ * ramp and one accent, which is what keeps a page of names calm enough to actually read.
+ */
+@theme {
+  --color-ink-950: #0c0b0a;
+  --color-ink-900: #141210;
+  --color-ink-850: #1b1917;
+  --color-ink-800: #24211e;
+  --color-ink-700: #322e2a;
+  --color-ink-600: #4a453f;
+  --color-ink-500: #6b645c;
+  --color-ink-400: #948c82;
+  --color-ink-300: #b8afa4;
+  --color-ink-200: #d6cec4;
+  --color-ink-100: #ece6dd;
+  --color-ink-50: #f7f4ef;
+
+  /* One accent, a dull brass. Used for emphasis, never for decoration. */
+  --color-brass-600: #8a6d3b;
+  --color-brass-500: #a9854a;
+  --color-brass-400: #c4a068;
+  --color-brass-300: #d8bb8c;
+  --color-brass-200: #e8d5b4;
+
+  --font-serif: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-ink-200);
+    font-family: var(--font-sans);
+    font-feature-settings: 'kern', 'liga';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* One focus treatment everywhere, visible against the dark surface. */
+  :focus-visible {
+    outline: 2px solid var(--color-brass-400);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  ::selection {
+    background-color: var(--color-brass-500);
+    color: var(--color-ink-950);
+  }
+}
+
+@layer components {
+  /*
+   * The single card surface. A hairline border rather than a shadow: shadows on a
+   * near-black background read as smudges, and a rule is what an archive index looks like.
+   */
+  .surface {
+    background-color: var(--color-ink-900);
+    border: 1px solid var(--color-ink-800);
+    border-radius: 10px;
+  }
+
+  .surface-hover {
+    transition:
+      border-color 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .surface-hover:hover {
+    background-color: var(--color-ink-850);
+    border-color: var(--color-ink-700);
+  }
+
+  /*
+   * Icon buttons. On a mouse these are a 33px square, which is plenty; on a finger they
+   * are a miss. The target grows on coarse pointers only, and by PADDING rather than by
+   * scaling the icon — the row keeps its proportions and the thumb gets its 44px.
+   */
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    padding: 8px;
+    transition: color 160ms ease;
+  }
+
+  @media (pointer: coarse) {
+    .icon-btn {
+      min-inline-size: 44px;
+      min-block-size: 44px;
+    }
+  }
+
+  /* Small-caps label, used for every section heading and field label. */
+  .label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-ink-400);
+  }
+}
+
+/*
+ * Restrained animation: things arrive, nothing bounces. Anyone who has asked their system
+ * to stop moving gets a static page — this motion is decorative, so it is the first thing
+ * to go.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 360ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
