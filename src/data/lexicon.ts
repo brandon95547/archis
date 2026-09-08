@@ -56,6 +56,14 @@ export const LEXICON: Root[] = [
   r('gr-eidos', 'eîdos', 'eid', 'greek', 'form seen; idea', ['sight', 'thought', 'creation'], 0.75),
   r('gr-telos', 'télos', 'tel', 'greek', 'end, purpose, completion', ['order', 'path'], 0.7),
   r('gr-pneuma', 'pneûma', 'pneu', 'greek', 'breath, spirit', ['breath', 'life'], 0.7),
+  // Making and fitting together. The lexicon had roots for creating out of
+  // nothing and none at all for *composing* — putting made things together —
+  // so any query about building, modelling or synthesis had nothing to answer
+  // it and fell through to the house concepts.
+  r('gr-harmonia', 'harmonía', 'harmon', 'greek', 'a joining, a fitting together', ['harmony', 'order', 'creation'], 0.95),
+  r('gr-synthesis', 'sýnthesis', 'synth', 'greek', 'a putting together, composition', ['creation', 'order', 'harmony'], 0.9),
+  r('gr-techne', 'tékhnē', 'tekhn', 'greek', 'craft, skill, art', ['creation', 'learning'], 0.9),
+  r('gr-typos', 'týpos', 'typ', 'greek', 'a stamp; the model struck from a die', ['creation', 'order'], 0.85),
 
   // ── Latin ─────────────────────────────────────────────────────────────────
   r('la-veritas', 'vēritās', 'ver', 'latin', 'truth', ['truth'], 1),
@@ -80,6 +88,10 @@ export const LEXICON: Root[] = [
   r('la-creare', 'creāre', 'crea', 'latin', 'to make, to bring forth', ['creation'], 0.9),
   r('la-vertere', 'vertere', 'vert', 'latin', 'to turn, to change', ['transformation'], 0.8),
   r('la-serenus', 'serēnus', 'seren', 'latin', 'clear, unclouded', ['clarity', 'light'], 0.7),
+  r('la-forma', 'fōrma', 'form', 'latin', 'form, shape, mould', ['creation', 'order', 'transformation'], 0.9),
+  r('la-structura', 'strūctūra', 'struct', 'latin', 'a fitting together, a building', ['order', 'foundation', 'creation'], 0.85),
+  r('la-texere', 'texere', 'tex', 'latin', 'to weave', ['creation', 'order'], 0.8),
+  r('la-fingere', 'fingere', 'fing', 'latin', 'to shape, to mould', ['creation', 'transformation'], 0.8),
 
   // ── Sanskrit ──────────────────────────────────────────────────────────────
   r('sa-satya', 'satya', 'saty', 'sanskrit', 'truth, what is real', ['truth'], 1),
@@ -98,6 +110,8 @@ export const LEXICON: Root[] = [
   r('sa-smrti', 'smṛti', 'smrit', 'sanskrit', 'memory, what is remembered', ['memory'], 0.95),
   r('sa-citta', 'citta', 'chit', 'sanskrit', 'mind, awareness', ['consciousness', 'mind'], 0.9),
   r('sa-kala', 'kāla', 'kal', 'sanskrit', 'time', ['time'], 0.9),
+  r('sa-yoga', 'yoga', 'yog', 'sanskrit', 'yoking, joining, union', ['harmony', 'order', 'path'], 0.9),
+  r('sa-rupa', 'rūpa', 'rup', 'sanskrit', 'form, shape as it appears', ['creation', 'sight'], 0.85),
   r('sa-vac', 'vāc', 'vach', 'sanskrit', 'speech, the spoken word', ['word', 'speech', 'voice'], 0.95),
   r('sa-naman', 'nāman', 'nam', 'sanskrit', 'name', ['name'], 0.95),
   r('sa-manas', 'manas', 'man', 'sanskrit', 'mind, thought', ['mind', 'thought'], 0.85),
@@ -140,6 +154,7 @@ export const LEXICON: Root[] = [
   r('su-an', 'an', 'an', 'sumerian', 'sky, heaven', ['sky'], 0.8),
   r('su-ud', 'ud', 'ud', 'sumerian', 'day, light, time', ['light', 'time'], 0.75),
   r('su-eresh', 'ereš', 'eresh', 'sumerian', 'wise, a wise woman', ['wisdom'], 0.8),
+  r('su-dim', 'dím', 'dim', 'sumerian', 'to make, to fashion', ['creation'], 0.85),
 
   // ── Akkadian ──────────────────────────────────────────────────────────────
   r('ak-kittu', 'kittu', 'kitt', 'akkadian', 'truth, what is firm', ['truth', 'foundation'], 0.95),
@@ -213,6 +228,8 @@ export const LEXICON: Root[] = [
   r('zh-xin', '心 xīn', 'xin', 'chinese', 'heart-mind', ['mind', 'consciousness'], 0.85),
   r('zh-shi', '時 shí', 'shi', 'chinese', 'time, the right season', ['time'], 0.85),
   r('zh-hua', '化 huà', 'hua', 'chinese', 'to transform', ['transformation'], 0.9),
+  r('zh-zao', '造 zào', 'zao', 'chinese', 'to make, to build', ['creation'], 0.85),
+  r('zh-cheng', '成 chéng', 'cheng', 'chinese', 'to complete, to bring into form', ['creation', 'transformation'], 0.8),
   r('zh-jue', '覺 jué', 'jue', 'chinese', 'to wake, to become aware', ['consciousness'], 0.85),
   r('zh-wen', '文 wén', 'wen', 'chinese', 'writing, pattern, culture', ['word', 'learning'], 0.8),
 
@@ -235,6 +252,7 @@ export const LEXICON: Root[] = [
   r('pie-bheh', '*bʰeh₂-', 'bha', 'pie', 'to shine; also to speak', ['light', 'speech'], 0.8),
   r('pie-nomn', '*h₁nómn̥', 'nomen', 'pie', 'name', ['name'], 0.9),
   r('pie-ar', '*h₂er-', 'ar', 'pie', 'to fit together', ['order', 'harmony'], 0.85),
+  r('pie-teks', '*teḱs-', 'teks', 'pie', 'to fashion, to weave', ['creation', 'order'], 0.85),
   r('pie-ayu', '*h₂éyu-', 'ayu', 'pie', 'vital force, long life', ['life', 'eternity'], 0.8),
   r('pie-dheh', '*dʰeh₁-', 'dhe', 'pie', 'to set in place, to make', ['creation', 'foundation'], 0.8),
   r('pie-klew', '*ḱlew-', 'klew', 'pie', 'to hear; and so, fame', ['voice', 'memory'], 0.8),

@@ -31,7 +31,7 @@ export class LocalNameService implements NameService {
     await new Promise((resolve) => setTimeout(resolve, 260))
 
     const { query, refinements, exclude = [] } = request
-    const { concepts, weights, unmatched } = interpret(query)
+    const { concepts, weights, unmatched, guessed } = interpret(query)
 
     const pool = gatherRoots(weights)
     if (pool.length < 2) {
@@ -78,13 +78,29 @@ export class LocalNameService implements NameService {
       names,
       concepts,
       languages,
-      notice: names.length < refinements.count
-        ? `Only ${names.length} names cleared the filters for this query. Widening the ideas usually helps.`
-        : unmatched.length > 0
-          ? `Read as ${concepts.slice(0, 4).join(', ')}. Nothing matched "${unmatched.slice(0, 3).join('", "')}".`
-          : undefined,
+      guessed,
+      // Both things can be true at once, and the reading is the more important
+      // of them. Choosing between them, as this used to, meant a query Archis
+      // had not understood at all could be reported as merely a thin one.
+      notice: [
+        guessed
+          ? `Archis does not know ${quote(unmatched)}, so these are built from its own ideas — ${concepts.slice(0, 4).join(', ')} — rather than yours. Naming what the words should mean usually lands: making, order, origin, memory.`
+          : unmatched.length > 0
+            ? `Read as ${concepts.slice(0, 4).join(', ')}. Nothing matched ${quote(unmatched)}.`
+            : null,
+        names.length < refinements.count
+          ? `Only ${names.length} names cleared the filters for this query. Widening the ideas usually helps.`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' ') || undefined,
     }
   }
+}
+
+/** The words we could not place, quoted, at most three of them. */
+function quote(words: string[]): string {
+  return words.slice(0, 3).map((word) => `"${word}"`).join(', ')
 }
 
 interface Scored {

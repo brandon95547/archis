@@ -50,15 +50,33 @@ function archaism(name: string): number {
   return Math.max(0, Math.min(1, score))
 }
 
-/** How well a root answers the query, weighted by how completely it carries the concept. */
+/**
+ * How well a root answers the query.
+ *
+ * Depth and breadth, in that order. The best-matching concept leads, and every further
+ * concept the root also answers takes a share of the room left above it — so a root can
+ * approach 1 but never reach it on breadth alone, and a root that carries one asked
+ * concept completely still outranks one that half-carries three.
+ *
+ * Breadth counts for something because without it this took the single best concept and
+ * nothing else, which quietly filled the pool with whatever the lexicon happened to weigh
+ * highest. Ask for "prototype, model, synthesize" and Greek would send *lógos* — a root
+ * about words, in the pool because it also carries "order" — ahead of *sýnthesis*, which
+ * answers three of the five things asked for and lost on five hundredths of a weight.
+ */
 export function meaningStrength(root: Root, weights: Map<Concept, number>): number {
-  let best = 0
-  for (const concept of root.concepts) {
-    const asked = weights.get(concept as Concept)
-    if (asked) best = Math.max(best, asked * root.weight)
-  }
-  return best
+  const hits = root.concepts
+    .map((concept) => (weights.get(concept as Concept) ?? 0) * root.weight)
+    .filter((hit) => hit > 0)
+    .sort((a, b) => b - a)
+
+  let strength = hits[0] ?? 0
+  for (const hit of hits.slice(1)) strength += (1 - strength) * hit * BREADTH
+  return strength
 }
+
+/** How much of the remaining headroom each further concept answered is worth. */
+const BREADTH = 0.5
 
 const endingOf = (name: string) => {
   const syllables = syllabify(name)

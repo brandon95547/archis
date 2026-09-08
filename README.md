@@ -27,10 +27,18 @@ Four stages, one file each.
 A vocabulary, not a parser. Phrases are matched before single words so `hidden knowledge`
 reads as concealment rather than as two tags pulling apart. A query too thin to blend
 widens along the strongest concept links; a query that matches nothing falls back to the
-concepts Archis is built around rather than refusing.
+concepts Archis is built around rather than refusing — and says so in the accent colour,
+because a fallback presented as a reading looks exactly like being ignored.
+
+Two things about the tag names are worth knowing before adding to it. They read like
+ordinary English and are not: `order` is cosmic law — ṛta, ma'at, dharma, dào — and
+`foundation` is entangled with truth, because five of the roots carrying it (ʾemet, kittu,
+*ʾ-m-n, kun) are truth roots in traditions where what is firm and what is true are one
+word. Sending a making word like `model` to either of those answers a question about
+building with names about truth.
 
 **2. Gather roots** — `src/data/lexicon.ts`
-~170 roots across Ancient Greek, Latin, Sanskrit, Pali, Ancient Egyptian, Sumerian,
+~185 roots across Ancient Greek, Latin, Sanskrit, Pali, Ancient Egyptian, Sumerian,
 Akkadian, Avestan, Old Persian, Biblical Hebrew, Aramaic, Phoenician, Classical Chinese,
 Ge'ez, Proto-Indo-European and Proto-Semitic.
 
@@ -61,6 +69,13 @@ output is a name someone has to look at and say, so the spelling is the thing be
 **4. Judge** — `src/lib/score.ts`
 Rejection and ranking are separate. A hard rule written as a heavy penalty is eventually
 outweighed by something else and ships the name anyway.
+
+How well a root answers the query is depth *and* breadth: the best-matching concept leads,
+and each further concept the root also answers takes a share of the room left above it, so
+the figure approaches 1 without ever reaching it on breadth alone. Depth alone was the
+original rule, and it quietly filled the pool with whatever the lexicon weighed highest —
+*lógos*, a root about words, arriving ahead of *sýnthesis* on a query about synthesis
+because it happened to also carry `order`.
 
 Rejected outright: brand lookalikes (edit distance, scaled to length), vocabulary from
 invented languages, unfortunate substrings, one syllable or more than four, crowded

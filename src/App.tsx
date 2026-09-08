@@ -225,7 +225,9 @@ export default function App() {
                     </span>
                   )}
                 </p>
-                {result.notice && <Notice>{result.notice}</Notice>}
+                {result.notice && (
+                  <Notice tone={result.guessed ? 'attention' : 'quiet'}>{result.notice}</Notice>
+                )}
               </div>
 
               <Grid

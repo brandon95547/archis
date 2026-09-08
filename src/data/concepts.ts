@@ -39,6 +39,9 @@ const PHRASES: [string, Concept[]][] = [
   ['ancient wisdom', ['wisdom', 'time', 'learning']],
   ['first light', ['light', 'origin', 'beginning']],
   ['open mind', ['mind', 'clarity', 'consciousness']],
+  ['first form', ['origin', 'creation', 'foundation']],
+  ['working model', ['creation', 'order', 'foundation']],
+  ['proof of concept', ['creation', 'truth', 'discovery']],
 ]
 
 /**
@@ -109,6 +112,60 @@ const WORDS: Record<string, Concept[]> = {
   journey: ['path'], sacred: ['sacred'], holy: ['sacred'], divine: ['sacred'],
   strength: ['strength'], power: ['strength'], foundation: ['foundation'],
   vision: ['sight'], sight: ['sight'], see: ['sight'], seeing: ['sight'],
+
+  /*
+   * Making, modelling and synthesis.
+   *
+   * This whole field was missing, and it is the one people naming a product
+   * reach for first. "prototype, model, synthesize" matched nothing at all, so
+   * the reader fell back to the house concepts and answered a query about
+   * building things with names about truth.
+   *
+   * Mapped mostly onto creation and foundation, and deliberately not onto
+   * "order". The tag names read like ordinary English and are not: `order`
+   * here is cosmic law — ṛta, ma'at, dharma, dào — so sending "model" to it
+   * answers a question about making with the moral order of the universe, and
+   * puts "Truth, given its measure" at the top of the page again.
+   *
+   * `foundation` is the same trap one step further in. Five of the nine roots
+   * carrying it — ʾemet, kittu, *ʾ-m-n, kun — are truth roots, because in those
+   * traditions what is firm and what is true are the same word. So the words
+   * for the made thing itself stay off it, and the ones that really do mean a
+   * thing built on (framework, construct) keep it.
+   */
+  prototype: ['origin', 'creation'],
+  archetype: ['origin', 'creation'],
+  model: ['creation', 'origin'],
+  template: ['creation', 'order'],
+  blueprint: ['creation', 'thought', 'foundation'],
+  schema: ['order', 'thought'],
+  draft: ['beginning', 'creation'],
+  sketch: ['beginning', 'creation'],
+  design: ['creation', 'thought'],
+  form: ['creation', 'transformation'],
+  shape: ['creation', 'transformation'],
+  mould: ['creation', 'transformation'], mold: ['creation', 'transformation'],
+  frame: ['foundation'], framework: ['foundation', 'creation'],
+  engineer: ['creation', 'foundation'], engine: ['creation', 'strength'],
+  construct: ['creation', 'foundation'], assemble: ['creation', 'harmony'],
+  fabricate: ['creation'], forming: ['creation', 'transformation'],
+  prototyping: ['origin', 'creation', 'foundation'],
+  // synthesis — putting made things together, which is not the same as making
+  synthesis: ['creation', 'harmony'],
+  synthesize: ['creation', 'harmony'],
+  combine: ['harmony', 'creation'], merge: ['harmony', 'creation'],
+  fuse: ['harmony', 'creation', 'fire'], blend: ['harmony', 'creation'],
+  unify: ['harmony', 'foundation'], unity: ['harmony'], union: ['harmony'],
+  weave: ['creation', 'harmony'], compose: ['creation', 'harmony', 'word'],
+  integrate: ['harmony', 'order'], compound: ['harmony', 'creation'],
+  join: ['harmony'], bind: ['harmony', 'foundation'],
+  whole: ['harmony', 'order'], coherence: ['harmony', 'clarity', 'order'],
+  // and the work around it
+  method: ['path', 'order'], technique: ['creation', 'learning'],
+  skill: ['creation', 'learning'], practice: ['learning', 'path'],
+  precision: ['clarity', 'order'], refine: ['clarity', 'transformation'],
+  iterate: ['transformation', 'path'], prove: ['truth', 'discovery'],
+  test: ['discovery', 'truth'], measure: ['order', 'clarity'],
 }
 
 /**
@@ -123,7 +180,9 @@ const NEIGHBOURS: Partial<Record<Concept, Concept[]>> = {
   hidden: ['depth', 'sacred', 'knowledge'],
   law: ['order', 'truth', 'foundation'],
   origin: ['beginning', 'creation', 'foundation'],
-  creation: ['origin', 'transformation', 'life'],
+  creation: ['origin', 'transformation', 'harmony'],
+  harmony: ['order', 'creation', 'foundation'],
+  foundation: ['order', 'origin', 'strength'],
   discovery: ['sight', 'path', 'clarity'],
   light: ['clarity', 'sight', 'fire'],
   transformation: ['creation', 'life', 'time'],
@@ -144,13 +203,23 @@ export interface Interpretation {
   weights: Map<Concept, number>
   /** Anything we could not place, so the UI can say so rather than silently ignoring it. */
   unmatched: string[]
+  /**
+   * True when *nothing* in the query landed.
+   *
+   * The concepts below are then Archis's own, not the user's, and every caller
+   * has to know the difference. Reading "prototype, model, synthesize" as
+   * truth and light and saying so in a footnote is not the same as answering
+   * the question, and it looks from the outside like the query was ignored.
+   */
+  guessed: boolean
 }
 
 /**
  * Read a free-text query into weighted concepts.
  *
  * Falls back to a broad, coherent set rather than nothing: an unreadable query should
- * still produce names worth looking at, and the UI says the reading was a guess.
+ * still produce names worth looking at. But it says so — `guessed` is how the caller
+ * knows the concepts came from Archis rather than from the person who typed.
  */
 export function interpret(query: string): Interpretation {
   const weights = new Map<Concept, number>()
@@ -171,9 +240,15 @@ export function interpret(query: string): Interpretation {
 
   const unmatched: string[] = []
   for (const raw of text.split(' ').filter(Boolean)) {
-    // Try the word, then a couple of cheap English endings. A stemmer would be heavier
-    // than this problem: the vocabulary above is the real coverage.
-    const candidates = [raw, raw.replace(/(ing|ness|ment|ions?|ed|s)$/, ''), `${raw}e`]
+    // Try the word, then a few cheap English endings. A stemmer would be heavier than
+    // this problem: the vocabulary above is the real coverage. The retries that add an
+    // "e" back earn their place — stripping "ing" off "prototyping" leaves "prototyp",
+    // which is in no vocabulary anywhere — and undoubling turns "modelling" into "model".
+    const stem = raw.replace(/(ing|ness|ment|ions?|ed|s)$/, '')
+    const undoubled = stem.replace(/([bdglmnprt])\1$/, '$1')
+    // British spellings of the -ize verbs. Guarded by length so "wise" is left alone.
+    const ise = raw.length > 5 ? raw.replace(/is(e|ed|ing)$/, 'iz$1') : raw
+    const candidates = [raw, stem, `${stem}e`, undoubled, `${undoubled}e`, `${raw}e`, ise]
     const hit = candidates.map((c) => WORDS[c]).find(Boolean)
     if (hit) hit.forEach((c) => bump(c, 1))
     else if (isConcept(raw)) bump(raw, 1)
@@ -181,7 +256,8 @@ export function interpret(query: string): Interpretation {
   }
 
   const asked = [...weights.keys()]
-  if (asked.length === 0) {
+  const guessed = asked.length === 0
+  if (guessed) {
     // Nothing landed. Rather than refuse, work from the concepts Archis is built around.
     ;(['truth', 'knowledge', 'origin', 'light', 'memory'] as Concept[]).forEach((c) => bump(c, 0.6))
   } else if (asked.length < 3) {
@@ -195,5 +271,5 @@ export function interpret(query: string): Interpretation {
     .sort((a, b) => b[1] - a[1])
     .map(([concept]) => concept)
 
-  return { concepts, weights, unmatched }
+  return { concepts, weights, unmatched, guessed }
 }

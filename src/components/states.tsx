@@ -61,11 +61,35 @@ export function NoResults({ notice }: { notice?: string }) {
   )
 }
 
-/** A quiet line above the grid, for a reading worth showing back or a partial result. */
-export function Notice({ children }: { children: React.ReactNode }) {
+/**
+ * A line above the grid, about the batch.
+ *
+ * Two weights, because two very different things get said here. That only nine
+ * names cleared the filters is a detail; that Archis did not understand a word
+ * of the query and answered with its own ideas is not, and in the muted grey
+ * both of them used to share, it read as a footnote to a page of names that
+ * had nothing to do with what was asked for. The brass is the one accent this
+ * app has, and this is what it is for.
+ */
+export function Notice({
+  children,
+  tone = 'quiet',
+}: {
+  children: React.ReactNode
+  tone?: 'quiet' | 'attention'
+}) {
+  const loud = tone === 'attention'
   return (
-    <p className="flex items-start gap-2.5 text-[13px] leading-relaxed text-ink-400">
-      <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-500" aria-hidden="true" />
+    <p
+      className={`flex items-start gap-2.5 text-[13px] leading-relaxed ${
+        loud ? 'text-brass-200' : 'text-ink-400'
+      }`}
+    >
+      {loud ? (
+        <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brass-400" aria-hidden="true" />
+      ) : (
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-500" aria-hidden="true" />
+      )}
       <span>{children}</span>
     </p>
   )

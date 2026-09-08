@@ -130,6 +130,13 @@ export interface GenerationResult {
   languages: string[]
   /** Set when the query matched too little to work with. */
   notice?: string
+  /**
+   * True when nothing in the query was understood and `concepts` are Archis's own.
+   *
+   * The difference between a reading and a guess is the difference between an
+   * answer and a shrug, and the page should not present them the same way.
+   */
+  guessed?: boolean
 }
 
 /**

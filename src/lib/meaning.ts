@@ -77,7 +77,12 @@ export function fullMeaning(head: Root, tail: Root, seed = ''): string {
       + `Nothing is claimed by the ending; it is there to make the name sayable.`
   }
 
-  return `${cap(a)} joined to ${b}. The name reads as `
+  // Roughly a fifth of the lexicon is glossed as a verb — "to weave", "to come into
+  // being" — and "joined to to come into being" is what the plain phrasing produced for
+  // every one of them.
+  const joined = b.startsWith('to ') ? `${cap(a)}, joined to a root meaning ${b}` : `${cap(a)} joined to ${b}`
+
+  return `${joined}. The name reads as `
     + `${shortInterpretation(head, tail, seed).toLowerCase()} — the first root sets what it is `
     + `about, the second says what becomes of it.`
 }
