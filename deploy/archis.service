@@ -1,0 +1,30 @@
+# Archis — rebuilds the static bundle served at archis.skylanex.com.
+#
+# Not a server. Archis runs entirely in the browser, so nothing needs to stay
+# alive to serve it; this unit exists to make a deploy one command:
+#
+#     cd /var/www/archis && git pull && sudo systemctl restart archis
+#
+# Type=oneshot with RemainAfterExit so `systemctl status archis` reads "active"
+# after a good build rather than "dead", which would look like a failure.
+#
+# Install:
+#     cp deploy/archis.service /etc/systemd/system/archis.service
+#     systemctl daemon-reload && systemctl enable --now archis
+[Unit]
+Description=Archis — rebuild the static bundle served at archis.skylanex.com
+Documentation=file:///var/www/archis/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/var/www/archis
+ExecStart=/var/www/archis/deploy/rebuild.sh
+TimeoutStartSec=900
+Nice=10
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
