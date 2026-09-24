@@ -11,6 +11,7 @@ import { NameCard } from './components/NameCard'
 import { NameDetail } from './components/NameDetail'
 import { Introduction, Loading, NoResults, Notice } from './components/states'
 import { FeatureStrip, WorkedExamples } from './components/landing'
+import { About, Footer } from './components/about'
 
 const DEFAULT_REFINEMENTS: Refinements = {
   length: 'medium',
@@ -307,9 +308,14 @@ export default function App() {
           <div className="mt-16 sm:mt-20">
             <FeatureStrip />
             <WorkedExamples />
+            <About />
           </div>
         )}
       </main>
+
+      {/* The footer stands on every view, unlike the landing sections above it: a reader
+          three searches deep should still be able to find their way back to Phansora. */}
+      <Footer />
 
       {open && (
         <NameDetail
