@@ -311,19 +311,6 @@ export default function App() {
         )}
       </main>
 
-      {/* ── the standing statement ──────────────────────────────────────── */}
-      <footer className="border-t border-ink-900">
-        <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
-          <p className="max-w-2xl text-base leading-relaxed text-ink-300">
-            <span className="text-ink-300">Every name here is newly coined.</span> Archis
-            builds them by blending roots from real languages, but the names themselves have
-            never been words in those languages and are not presented as historical. The
-            roots, their languages and their meanings are shown on each name so you can see
-            exactly what it was made from — and check it before you use it.
-          </p>
-        </div>
-      </footer>
-
       {open && (
         <NameDetail
           name={open}
