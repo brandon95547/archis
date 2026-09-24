@@ -76,36 +76,44 @@ type Example = {
   languages: string
 }
 
-// Worked examples, shown as a sample of the real thing rather than generated live: the
-// engine runs in the browser and coining three names on load would compete with the very
-// first search for the main thread.
+// Worked examples, captured from the engine itself rather than written.
+//
+// The first version of this file carried the mock's names, and the mock's etymology was
+// invented — "vael (Latin: truth)" is not a Latin word. On a page whose whole promise is
+// that it shows you the real roots and invites you to check them, three fabricated
+// examples undercut the one claim everything else rests on.
+//
+// These are what LocalNameService returns, roots and glosses included, taken verbatim.
+// The concept chips on each card are the exact query that produced it, so a reader who
+// doubts one can type it into the box above and get the same name back. Not generated at load: the engine runs on the main thread and
+// coining three names on mount would compete with the reader's first real search.
 const EXAMPLES: Example[] = [
   {
-    name: 'Vaelthar',
+    name: 'Logolum',
     image: '/images/archis-example-ruins.webp',
     alt: 'A colonnaded temple in ruins on a headland at sunset.',
     concepts: ['truth', 'light', 'order'],
-    roots: 'vael (Latin: truth) + thār (Old Norse: order)',
-    meaning: 'One who reveals ordered truth.',
-    languages: 'Latin, Old Norse',
+    roots: 'log (Greek: word, reason, account) + lum (Latin: light, the light of a lamp)',
+    meaning: 'Word made plain.',
+    languages: 'Greek, Latin',
   },
   {
-    name: 'Zorimath',
+    name: 'Sophadi',
     image: '/images/archis-example-middle.webp',
     alt: 'Sunrise over a range of snow-capped mountains above a still lake.',
     concepts: ['wisdom', 'memory', 'origin'],
-    roots: 'zor (Akkadian: to see) + im (Sumerian: mother) + ath (Greek: source)',
-    meaning: 'The source of deep remembrance.',
-    languages: 'Akkadian, Sumerian, Greek',
+    roots: 'soph (Greek: wisdom, skill) + adi (Sanskrit: beginning, first)',
+    meaning: 'Wisdom at its source.',
+    languages: 'Greek, Sanskrit',
   },
   {
-    name: 'Neravion',
+    name: 'Gnoseper',
     image: '/images/archis-example-right.webp',
     alt: 'A dark stone hall with a shaft of light falling at the far end.',
     concepts: ['hidden knowledge', 'discovery', 'transformation'],
-    roots: 'ner (Hebrew: light) + av (Proto-Indo-European: force) + ion (Greek: motion)',
-    meaning: 'The power to uncover and move beyond.',
-    languages: 'Hebrew, PIE, Greek',
+    roots: 'gnos (Greek: knowing, insight) + kheper (Egyptian: to come into being)',
+    meaning: 'Knowing as it becomes.',
+    languages: 'Greek, Egyptian',
   },
 ]
 
