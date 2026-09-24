@@ -135,12 +135,9 @@ export default function App() {
       {/* ── masthead ────────────────────────────────────────────────────── */}
       <header>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
-          <div className="flex items-baseline gap-3">
-            <span className="font-serif text-[19px] font-medium tracking-tight text-ink-50">
+          <div className="flex items-baseline">
+            <span className="font-serif text-[23px] font-medium tracking-tight text-ink-50">
               Archis
-            </span>
-            <span className="hidden text-[12px] text-ink-500 sm:inline">
-              a Phansora product
             </span>
           </div>
 
@@ -154,7 +151,7 @@ export default function App() {
                 <a
                   key={href}
                   href={href}
-                  className="rounded-lg px-3 py-2 text-sm text-ink-300 transition-colors hover:text-ink-50"
+                  className="rounded-lg px-3 py-2 text-base text-ink-300 transition-colors hover:text-ink-50"
                 >
                   {label}
                 </a>
@@ -165,7 +162,7 @@ export default function App() {
             type="button"
             onClick={() => setShowKept((value) => !value)}
             aria-pressed={showKept}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-base transition-colors ${
               showKept
                 ? 'border-brass-600 bg-brass-500/10 text-brass-300'
                 : 'border-ink-800 text-ink-300 hover:border-ink-600 hover:text-ink-100'
@@ -178,7 +175,7 @@ export default function App() {
             />
             Kept
             {favorites.length > 0 && (
-              <span className="font-mono text-[11px] text-ink-400">{favorites.length}</span>
+              <span className="font-mono text-base text-ink-300">{favorites.length}</span>
             )}
           </button>
           </div>
@@ -194,7 +191,7 @@ export default function App() {
           {/* ink-200, not the ink-400 this paragraph uses elsewhere: that step is the
               floor against the page's near-black background, and this one sits on a
               photograph. */}
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-200">
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-ink-200">
             Enter the ideas a name should carry. Archis finds the roots that hold them
             across the old languages and blends those roots into words that have never
             been said.
@@ -225,11 +222,11 @@ export default function App() {
           {showKept ? (
             favorites.length === 0 ? (
               <div className="py-16 text-center">
-                <Bookmark className="mx-auto h-6 w-6 text-ink-500" aria-hidden="true" />
+                <Bookmark className="mx-auto h-6 w-6 text-ink-400" aria-hidden="true" />
                 <h2 className="mt-5 font-serif text-xl font-medium text-ink-100">
                   Nothing kept yet
                 </h2>
-                <p className="mt-3 text-[15px] text-ink-400">
+                <p className="mt-3 text-base text-ink-300">
                   The bookmark on any name keeps it here.
                 </p>
               </div>
@@ -245,12 +242,12 @@ export default function App() {
             )
           ) : error ? (
             <div className="surface mx-auto max-w-lg p-6 text-center">
-              <p className="text-[15px] text-ink-100">The names could not be generated.</p>
-              <p className="mt-2 text-[13px] leading-relaxed text-ink-400">{error}</p>
+              <p className="text-base text-ink-100">The names could not be generated.</p>
+              <p className="mt-2 text-base leading-relaxed text-ink-300">{error}</p>
               <button
                 type="button"
                 onClick={() => search(searched.current)}
-                className="mt-5 rounded-lg border border-ink-700 px-4 py-2 text-sm text-ink-200 transition-colors hover:border-ink-500 hover:text-ink-50"
+                className="mt-5 rounded-lg border border-ink-700 px-4 py-2 text-base text-ink-200 transition-colors hover:border-ink-500 hover:text-ink-50"
               >
                 Try again
               </button>
@@ -264,7 +261,7 @@ export default function App() {
           ) : (
             <>
               <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-                <p className="text-[13px] text-ink-400">
+                <p className="text-base text-ink-300">
                   <span className="text-ink-300">{result.names.length}</span> names from{' '}
                   <span className="text-ink-300">{result.languages.length}</span> traditions
                   {result.languages.length > 0 && (
@@ -292,7 +289,7 @@ export default function App() {
                   type="button"
                   onClick={more}
                   disabled={busy}
-                  className="flex items-center gap-2 rounded-lg border border-ink-800 px-5 py-2.5 text-sm text-ink-300 transition-colors hover:border-ink-600 hover:text-ink-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg border border-ink-800 px-5 py-2.5 text-base text-ink-300 transition-colors hover:border-ink-600 hover:text-ink-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   {busy ? 'Working' : 'More names'}
@@ -317,7 +314,7 @@ export default function App() {
       {/* ── the standing statement ──────────────────────────────────────── */}
       <footer className="border-t border-ink-900">
         <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
-          <p className="max-w-2xl text-[13px] leading-relaxed text-ink-400">
+          <p className="max-w-2xl text-base leading-relaxed text-ink-300">
             <span className="text-ink-300">Every name here is newly coined.</span> Archis
             builds them by blending roots from real languages, but the names themselves have
             never been words in those languages and are not presented as historical. The

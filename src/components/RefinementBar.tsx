@@ -99,10 +99,10 @@ function Group({ label, name, options, value, onChange, disabled }: GroupProps) 
           return (
             <label
               key={option}
-              className={`cursor-pointer rounded-md px-3 py-1.5 text-sm transition-colors ${
+              className={`cursor-pointer rounded-md px-3 py-1.5 text-base transition-colors ${
                 checked
                   ? 'bg-ink-800 text-ink-100'
-                  : 'text-ink-400 hover:text-ink-200'
+                  : 'text-ink-300 hover:text-ink-200'
               } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
             >
               <input

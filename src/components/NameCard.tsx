@@ -44,10 +44,10 @@ export function NameCard({
         <h3 className="font-serif text-[27px] leading-tight font-medium text-ink-50">
           {name.name}
         </h3>
-        <p className="mt-1.5 font-mono text-[12px] tracking-wide text-brass-400">
+        <p className="mt-1.5 font-mono text-base tracking-wide text-brass-400">
           {name.pronunciation}
         </p>
-        <p className="mt-3 text-[14px] leading-relaxed text-ink-300">
+        <p className="mt-3 text-base leading-relaxed text-ink-300">
           {name.interpretation}
         </p>
       </div>
@@ -60,7 +60,7 @@ export function NameCard({
           className={`icon-btn ${
             favorite
               ? 'text-brass-400 hover:text-brass-300'
-              : 'text-ink-400 hover:text-ink-100'
+              : 'text-ink-300 hover:text-ink-100'
           }`}
           title={favorite ? `Remove ${name.name} from kept names` : `Keep ${name.name}`}
         >
@@ -77,7 +77,7 @@ export function NameCard({
         <button
           type="button"
           onClick={onCopy}
-          className="icon-btn text-ink-400 hover:text-ink-100"
+          className="icon-btn text-ink-300 hover:text-ink-100"
           title={`Copy ${name.name}`}
         >
           {copied ? (
@@ -94,7 +94,7 @@ export function NameCard({
           {copied ? `${name.name} copied` : ''}
         </span>
 
-        <span className="ml-auto font-mono text-[11px] text-ink-400">
+        <span className="ml-auto font-mono text-base text-ink-300">
           {name.syllables} syl
         </span>
       </div>

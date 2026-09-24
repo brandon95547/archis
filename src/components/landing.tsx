@@ -127,7 +127,7 @@ export function FeatureStrip() {
               {f.icon}
             </span>
             <h3 className="mt-4 font-serif text-[17px] font-medium text-ink-50">{f.title}</h3>
-            <p className="mt-2 text-[14px] leading-relaxed text-ink-400">{f.body}</p>
+            <p className="mt-2 text-base leading-relaxed text-ink-300">{f.body}</p>
           </li>
         ))}
       </ul>
@@ -141,7 +141,7 @@ export function WorkedExamples() {
       <h2 className="text-center font-serif text-[26px] font-medium text-ink-50 sm:text-[30px]">
         See how it works
       </h2>
-      <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-ink-400">
+      <p className="mx-auto mt-3 max-w-xl text-center text-base leading-relaxed text-ink-300">
         Each name shows the original roots, languages, and meaning behind it.
       </p>
 
@@ -168,24 +168,24 @@ export function WorkedExamples() {
                 {e.concepts.map((c) => (
                   <li
                     key={c}
-                    className="rounded-full border border-ink-800 bg-ink-850 px-2 py-0.5 text-[12px] text-ink-300"
+                    className="rounded-full border border-ink-800 bg-ink-850 px-2 py-0.5 text-base text-ink-300"
                   >
                     {c}
                   </li>
                 ))}
               </ul>
-              <dl className="mt-4 space-y-1.5 text-[13px] leading-relaxed">
+              <dl className="mt-4 space-y-1.5 text-base leading-relaxed">
                 <div>
                   <dt className="inline font-medium text-ink-200">Roots: </dt>
-                  <dd className="inline text-ink-400">{e.roots}</dd>
+                  <dd className="inline text-ink-300">{e.roots}</dd>
                 </div>
                 <div>
                   <dt className="inline font-medium text-ink-200">Meaning: </dt>
-                  <dd className="inline text-ink-400">{e.meaning}</dd>
+                  <dd className="inline text-ink-300">{e.meaning}</dd>
                 </div>
                 <div>
                   <dt className="inline font-medium text-ink-200">Languages: </dt>
-                  <dd className="inline text-ink-400">{e.languages}</dd>
+                  <dd className="inline text-ink-300">{e.languages}</dd>
                 </div>
               </dl>
             </div>

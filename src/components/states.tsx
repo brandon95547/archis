@@ -33,11 +33,11 @@ export function Loading({ count }: { count: number }) {
 export function Introduction() {
   return (
     <div className="mx-auto max-w-2xl py-16 text-center sm:py-24">
-      <Compass className="mx-auto h-7 w-7 text-ink-500" aria-hidden="true" />
+      <Compass className="mx-auto h-7 w-7 text-ink-400" aria-hidden="true" />
       <h2 className="mt-6 font-serif text-2xl font-medium text-ink-100">
         Say what a name should mean
       </h2>
-      <p className="mt-4 text-[15px] leading-relaxed text-ink-400">
+      <p className="mt-4 text-base leading-relaxed text-ink-300">
         Archis reads your concepts, gathers the strongest roots for them across the ancient
         languages, and blends those roots into names that have never existed. Every name
         shows its sources.
@@ -49,11 +49,11 @@ export function Introduction() {
 export function NoResults({ notice }: { notice?: string }) {
   return (
     <div className="mx-auto max-w-lg py-16 text-center">
-      <TriangleAlert className="mx-auto h-6 w-6 text-ink-500" aria-hidden="true" />
+      <TriangleAlert className="mx-auto h-6 w-6 text-ink-400" aria-hidden="true" />
       <h2 className="mt-5 font-serif text-xl font-medium text-ink-100">
         Nothing cleared the filters
       </h2>
-      <p className="mt-3 text-[15px] leading-relaxed text-ink-400">
+      <p className="mt-3 text-base leading-relaxed text-ink-300">
         {notice
           ?? 'Try broader ideas — single abstract concepts like truth, memory or origin give the lexicon the most to work with.'}
       </p>
@@ -81,14 +81,14 @@ export function Notice({
   const loud = tone === 'attention'
   return (
     <p
-      className={`flex items-start gap-2.5 text-[13px] leading-relaxed ${
-        loud ? 'text-brass-200' : 'text-ink-400'
+      className={`flex items-start gap-2.5 text-base leading-relaxed ${
+        loud ? 'text-brass-200' : 'text-ink-300'
       }`}
     >
       {loud ? (
         <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brass-400" aria-hidden="true" />
       ) : (
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-500" aria-hidden="true" />
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-400" aria-hidden="true" />
       )}
       <span>{children}</span>
     </p>

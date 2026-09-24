@@ -60,7 +60,7 @@ export function SearchBar({ value, onChange, onSubmit, busy, showExamples }: Pro
         </label>
         <div className="group relative">
           <Search
-            className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400 transition-colors group-focus-within:text-brass-400"
+            className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-300 transition-colors group-focus-within:text-brass-400"
             aria-hidden="true"
           />
           <input
@@ -72,7 +72,7 @@ export function SearchBar({ value, onChange, onSubmit, busy, showExamples }: Pro
             placeholder="truth, wisdom, hidden knowledge"
             autoComplete="off"
             spellCheck={false}
-            className="w-full rounded-xl border border-ink-800 bg-ink-900 py-4 pl-14 pr-32 text-base text-ink-100 placeholder:text-ink-400 transition-colors hover:border-ink-700 focus:border-brass-500 focus:outline-none sm:py-5 sm:text-lg [&::-webkit-search-cancel-button]:appearance-none"
+            className="w-full rounded-xl border border-ink-800 bg-ink-900 py-4 pl-14 pr-32 text-base text-ink-100 placeholder:text-ink-300 transition-colors hover:border-ink-700 focus:border-brass-500 focus:outline-none sm:py-5 sm:text-lg [&::-webkit-search-cancel-button]:appearance-none"
           />
           {value && (
             <button
@@ -81,7 +81,7 @@ export function SearchBar({ value, onChange, onSubmit, busy, showExamples }: Pro
                 onChange('')
                 input.current?.focus()
               }}
-              className="icon-btn absolute right-24 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-100"
+              className="icon-btn absolute right-24 top-1/2 -translate-y-1/2 text-ink-300 hover:text-ink-100"
               aria-label="Clear"
             >
               <X className="h-4 w-4" aria-hidden="true" />
@@ -90,7 +90,7 @@ export function SearchBar({ value, onChange, onSubmit, busy, showExamples }: Pro
           <button
             type="submit"
             disabled={busy || !value.trim()}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-brass-500 px-4 py-2.5 text-sm font-medium text-ink-950 transition-colors hover:bg-brass-400 disabled:cursor-not-allowed disabled:bg-ink-800 disabled:text-ink-500"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-brass-500 px-4 py-2.5 text-base font-medium text-ink-950 transition-colors hover:bg-brass-400 disabled:cursor-not-allowed disabled:bg-ink-800 disabled:text-ink-400"
           >
             {busy ? 'Working' : 'Coin'}
           </button>
@@ -108,7 +108,7 @@ export function SearchBar({ value, onChange, onSubmit, busy, showExamples }: Pro
                 onChange(example)
                 onSubmit(example)
               }}
-              className="rounded-full border border-ink-800 px-3 py-1.5 text-sm text-ink-300 transition-colors hover:border-ink-600 hover:text-ink-100"
+              className="rounded-full border border-ink-800 px-3 py-1.5 text-base text-ink-300 transition-colors hover:border-ink-600 hover:text-ink-100"
             >
               {example}
             </button>
