@@ -10,6 +10,7 @@ import { RefinementBar } from './components/RefinementBar'
 import { NameCard } from './components/NameCard'
 import { NameDetail } from './components/NameDetail'
 import { Introduction, Loading, NoResults, Notice } from './components/states'
+import { FeatureStrip, WorkedExamples } from './components/landing'
 
 const DEFAULT_REFINEMENTS: Refinements = {
   length: 'medium',
@@ -108,8 +109,31 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
+      {/* ── hero band ─────────────────────────────────────────────────────
+          The photograph runs behind the masthead as well as the search, so the two
+          share a container. `isolate` keeps the negative z-indexes from escaping it
+          into the rest of the page. */}
+      <div className="relative isolate overflow-hidden border-b border-ink-900">
+        <img
+          src="/images/archis-full-hero-background.webp"
+          alt=""
+          width={2048}
+          height={768}
+          fetchPriority="high"
+          className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+        />
+        {/* The veil. The page's OWN background rather than black, so the hero darkens
+            toward the colour everything below it already is.
+            
+            It is a left-weighted GRADIENT and never lighter than the 40% asked for. Flat
+            40% measured 3.02:1 under the sub-headline — the photograph averages
+            rgb(99,104,104) there, which is far too bright to read 15px type on. The text
+            all sits on the left, the statue that earns the photograph is on the right, and
+            a gradient serves both: 85% where the words are, 40% over the statue. */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ink-950/85 via-ink-950/60 to-ink-950/40" />
+
       {/* ── masthead ────────────────────────────────────────────────────── */}
-      <header className="border-b border-ink-900">
+      <header>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
           <div className="flex items-baseline gap-3">
             <span className="font-serif text-[19px] font-medium tracking-tight text-ink-50">
@@ -119,6 +143,23 @@ export default function App() {
               a Phansora product
             </span>
           </div>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            <nav aria-label="Sections" className="hidden items-center gap-1 sm:flex">
+              {[
+                ['How it works', '#how-it-works'],
+                ['Examples', '#examples'],
+                ['About', '#about'],
+              ].map(([label, href]) => (
+                <a
+                  key={href}
+                  href={href}
+                  className="rounded-lg px-3 py-2 text-sm text-ink-300 transition-colors hover:text-ink-50"
+                >
+                  {label}
+                </a>
+              ))}
+            </nav>
 
           <button
             type="button"
@@ -140,16 +181,20 @@ export default function App() {
               <span className="font-mono text-[11px] text-ink-400">{favorites.length}</span>
             )}
           </button>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 sm:px-8">
         {/* ── the search ────────────────────────────────────────────────── */}
-        <section className="pt-14 sm:pt-20">
+        <section className="pb-16 pt-10 sm:pb-20 sm:pt-14">
           <h1 className="max-w-2xl font-serif text-[34px] leading-[1.15] font-medium text-ink-50 sm:text-[44px]">
-            New names, built from ancient roots
+            New names, built <span className="text-brass-300">from ancient roots</span>
           </h1>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-400">
+          {/* ink-200, not the ink-400 this paragraph uses elsewhere: that step is the
+              floor against the page's near-black background, and this one sits on a
+              photograph. */}
+          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-200">
             Enter the ideas a name should carry. Archis finds the roots that hold them
             across the old languages and blends those roots into words that have never
             been said.
@@ -166,12 +211,15 @@ export default function App() {
           </div>
 
           {hasSearched && (
-            <div className="mt-8 border-t border-ink-900 pt-7">
+            <div className="mt-8 border-t border-ink-800/80 pt-7">
               <RefinementBar value={refinements} onChange={changeRefinements} disabled={busy} />
             </div>
           )}
         </section>
+      </div>
+      </div>
 
+      <main className="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
         {/* ── results ───────────────────────────────────────────────────── */}
         <section className="mt-12" aria-busy={busy}>
           {showKept ? (
@@ -253,6 +301,17 @@ export default function App() {
             </>
           )}
         </section>
+
+        {/* ── the landing strip ─────────────────────────────────────────────
+            Before a search only. Once names are on screen they are what the page
+            is for, and this under them would push the thing the reader asked for
+            off the fold. Hidden behind the Kept list for the same reason. */}
+        {!hasSearched && !showKept && (
+          <div className="mt-16 sm:mt-20">
+            <FeatureStrip />
+            <WorkedExamples />
+          </div>
+        )}
       </main>
 
       {/* ── the standing statement ──────────────────────────────────────── */}
