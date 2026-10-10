@@ -4,3 +4,7 @@ dist
 .env.local
 *.local
 .DS_Store
+
+# Raw dictionary dumps the root database is built from (several GB) — see scripts/
+data-src/*
+!data-src/fetch.sh

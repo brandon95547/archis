@@ -87,24 +87,27 @@ type Example = {
 // The concept chips on each card are the exact query that produced it, so a reader who
 // doubts one can type it into the box above and get the same name back. Not generated at load: the engine runs on the main thread and
 // coining three names on mount would compete with the reader's first real search.
+//
+// Rebuilding the root database can change what a query returns. scripts/battery.ts runs
+// these three and fails if any of the names below stops coming back.
 const EXAMPLES: Example[] = [
   {
-    name: 'Logolum',
+    name: 'Emetur',
     image: '/images/archis-example-ruins.webp',
     alt: 'A colonnaded temple in ruins on a headland at sunset.',
     concepts: ['truth', 'light', 'order'],
-    roots: 'log (Greek: word, reason, account) + lum (Latin: light, the light of a lamp)',
-    meaning: 'Word made plain.',
-    languages: 'Greek, Latin',
+    roots: 'emet (Hebrew: truth; what holds firm) + nur (Akkadian: light)',
+    meaning: 'Truth, brought into the light.',
+    languages: 'Hebrew, Akkadian',
   },
   {
-    name: 'Sophadi',
+    name: 'Sophokur',
     image: '/images/archis-example-middle.webp',
     alt: 'Sunrise over a range of snow-capped mountains above a still lake.',
     concepts: ['wisdom', 'memory', 'origin'],
-    roots: 'soph (Greek: wisdom, skill) + adi (Sanskrit: beginning, first)',
-    meaning: 'Wisdom at its source.',
-    languages: 'Greek, Sanskrit',
+    roots: 'soph (Greek: wisdom, skill) + mekur (Hebrew: origin)',
+    meaning: 'Wisdom, joined to origin.',
+    languages: 'Greek, Hebrew',
   },
   {
     name: 'Gnoseper',

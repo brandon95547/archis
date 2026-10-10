@@ -1,0 +1,36 @@
+// Written by scripts/build_roots.py — the tally of the generated root database.
+export const STATS = {
+  "roots": 48478,
+  "meanings": 9883,
+  "words": 19417,
+  "shards": 512,
+  "languages": {
+    "adunaic": 109,
+    "akkadian": 447,
+    "aramaic": 1861,
+    "blackspeech": 14,
+    "egyptian": 1545,
+    "geez": 334,
+    "gothic": 1821,
+    "greek": 5921,
+    "hebrew": 2742,
+    "hittite": 121,
+    "khuzdul": 29,
+    "latin": 8451,
+    "oldenglish": 5517,
+    "oldirish": 1796,
+    "oldnorse": 2413,
+    "oldpersian": 75,
+    "pali": 1608,
+    "pcelt": 1103,
+    "pelvish": 1043,
+    "pgmc": 3147,
+    "pie": 1052,
+    "quenya": 1240,
+    "sanskrit": 4506,
+    "sindarin": 777,
+    "sumerian": 658,
+    "telerin": 112,
+    "westron": 36
+  }
+} as const

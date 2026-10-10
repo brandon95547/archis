@@ -1,5 +1,6 @@
 import type { NameService } from '../types'
 import { LocalNameService } from './localNameService'
+import { loadShard } from '../data/browserShards'
 import { DeepSeekNameService } from './deepseekNameService'
 
 /**
@@ -12,7 +13,7 @@ import { DeepSeekNameService } from './deepseekNameService'
 export function createNameService(): NameService {
   const engine = import.meta.env.VITE_ARCHIS_ENGINE
   if (engine === 'deepseek') return new DeepSeekNameService()
-  return new LocalNameService()
+  return new LocalNameService(loadShard)
 }
 
 export { LocalNameService, DeepSeekNameService }

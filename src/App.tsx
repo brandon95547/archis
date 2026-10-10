@@ -272,7 +272,7 @@ export default function App() {
                   )}
                 </p>
                 {result.notice && (
-                  <Notice tone={result.guessed ? 'attention' : 'quiet'}>{result.notice}</Notice>
+                  <Notice>{result.notice}</Notice>
                 )}
               </div>
 

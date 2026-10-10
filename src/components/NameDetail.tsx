@@ -3,6 +3,16 @@ import { Fragment, useEffect, useRef, type ReactNode } from 'react'
 import type { GeneratedName } from '../types'
 import { LANGUAGES } from '../data/languages'
 
+/**
+ * What the badge on a root says when the root is anything other than a word found in
+ * surviving texts. An attested root gets no badge: that is the ordinary case.
+ */
+const PROVENANCE_LABEL: Record<string, string> = {
+  reconstructed: 'Reconstructed',
+  constructed: 'Invented language',
+  phonetic: 'Sound only',
+}
+
 /** One line of the working: a label, and the letters it refers to. */
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -185,7 +195,7 @@ export function NameDetail({ name, favorite, copied, onClose, onCopy, onFavorite
                       </span>
                       {language?.provenance !== 'attested' && (
                         <span className="rounded border border-ink-700 px-1.5 py-0.5 text-base uppercase tracking-wider text-ink-300">
-                          {language?.provenance === 'reconstructed' ? 'Reconstructed' : 'Sound only'}
+                          {PROVENANCE_LABEL[language?.provenance ?? 'phonetic']}
                         </span>
                       )}
                     </div>

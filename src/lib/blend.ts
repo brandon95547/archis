@@ -146,7 +146,7 @@ function join(head: string, tail: string): Join | null {
       head,
       link: vowel,
       tail,
-      note: `a linking "${vowel}" opens the join, taking its colour from the vowel before it`,
+      note: `a linking "${vowel}" opens the join, taking its color from the vowel before it`,
     }
   }
 

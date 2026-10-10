@@ -53,18 +53,48 @@ const pick = <T,>(options: T[], seed: string): T => {
   return options[hash % options.length]
 }
 
+/** Noun, verb or adjective. The dictionaries say; for the hand-written roots the gloss does. */
+const kind = (root: Root) => (root.gloss.startsWith('to ') ? 'v' : root.pos ?? 'n')
+
+/**
+ * The line for two roots that came from a dictionary.
+ *
+ * The relations above are written for the house concepts and say nothing about a wolf or
+ * a river. For everything else the grammar of the two glosses does the work, and both
+ * meanings are named outright: an adjective and a noun are "the black wolf", a verb at
+ * the end is what the first root is "made to" do.
+ */
+function plainReading(head: Root, tail: Root, key: string): string {
+  const a = core(head.gloss)
+  const b = core(tail.gloss)
+  const shape = kind(head) + kind(tail)
+  const to = (verb: string) => (verb.startsWith('to ') ? verb : `to ${verb}`)
+
+  if (shape === 'an') return pick([`The ${a} ${b}`, `${cap(b)}, made ${a}`], key)
+  if (shape === 'na') return pick([`The ${b} ${a}`, `${cap(a)}, made ${b}`], key)
+  if (shape === 'nv' || shape === 'av') return `${cap(a)}, made ${to(b)}`
+  if (shape === 'vv') return `${cap(to(a))} and ${to(b)}`
+  // A verb in front reads best as the bare idea: "drink and hearth", not "to drink".
+  if (shape === 'vn' || shape === 'va') return `${cap(a.replace(/^to /, ''))} and ${b}`
+  return pick([`${cap(a)} and ${b}`, `${cap(a)}, joined to ${b}`], key)
+}
+
 /** One line, for the card. Short enough to read at a glance. */
 export function shortInterpretation(head: Root, tail: Root, seed = ''): string {
   const a = core(head.gloss)
-  const b = core(tail.gloss)
   const key = seed || head.id + tail.id
 
   if (tail.concepts.length === 0) return `${cap(a)}, given a shape to be said aloud`
 
-  for (const [concepts, phrasings] of RELATIONS) {
-    if (has(tail, ...concepts)) return pick(phrasings, key)(a)
+  // A dictionary root's meanings are ordinary words, and some of them are also house
+  // concepts — but "light" in a gloss can be the opposite of heavy. Only the hand-written
+  // roots, whose tags were chosen as concepts, are read through the relations.
+  if (!tail.pos && !head.pos) {
+    for (const [concepts, phrasings] of RELATIONS) {
+      if (has(tail, ...concepts)) return pick(phrasings, key)(a)
+    }
   }
-  return `${cap(a)} and ${b}`
+  return plainReading(head, tail, key)
 }
 
 /** The longer reading, for the detail panel: what the two glosses make together. */

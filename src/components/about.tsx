@@ -6,21 +6,31 @@
  * nav already scrolls to #how-it-works and #examples; #about was the one anchor pointing
  * at nothing, and this is what it points at.
  *
- * Every number below is read off the lexicon rather than written down, because a figure
- * in prose is a figure that goes stale the first time someone adds a root.
+ * Every number below is read off the lexicon and the database's own tally rather than
+ * written down, because a figure in prose is a figure that goes stale the first time
+ * someone adds a root.
  */
 
 import { LEXICON } from '../data/lexicon'
-import { languageName } from '../data/languages'
+import { LANGUAGES as LANGUAGE_INFO, languageName } from '../data/languages'
+import { STATS } from '../data/generated/stats'
 
 // "Euphonic ending" is a join category, not a language, so it is not counted or listed as
 // one — the difference matters on a page whose subject is which languages are in here.
-const LANGUAGES = [...new Set(LEXICON.map((r) => r.language))]
-  .map((code) => languageName(code))
-  .filter((name) => name !== 'Euphonic ending')
-  .sort((a, b) => a.localeCompare(b))
+const CODES = [...new Set([...LEXICON.map((r) => r.language), ...Object.keys(STATS.languages)])]
+  .filter((code) => code !== 'euphonic')
 
-const ROOT_COUNT = LEXICON.length
+const named = (codes: string[]) =>
+  codes.map((code) => languageName(code)).sort((a, b) => a.localeCompare(b))
+
+// Listed apart from the ancient ones, for the same reason the detail panel badges them.
+const invented = (code: string) => LANGUAGE_INFO[code]?.provenance === 'constructed'
+const LANGUAGES = named(CODES.filter((code) => !invented(code)))
+const INVENTED = named(CODES.filter(invented))
+
+const ROOT_COUNT = (STATS.roots + LEXICON.filter((r) => r.language !== 'euphonic').length)
+  .toLocaleString('en-US')
+const MEANING_COUNT = STATS.meanings.toLocaleString('en-US')
 
 export function About() {
   return (
@@ -41,9 +51,15 @@ export function About() {
             they came from and what they mean — so you can check it before you use it.
           </p>
           <p>
-            It runs entirely in your browser. There is no account, nothing is uploaded, and
-            no request leaves the page: the lexicon and the engine are part of the app you
-            have already downloaded. Names you keep are stored in this browser only.
+            Most of the roots are ancient. Some come from the languages J. R. R. Tolkien
+            invented, and a root from one of those is marked as an invented-language root
+            wherever it appears — it is never passed off as an old one.
+          </p>
+          <p>
+            It runs in your browser. There is no account and your search is never sent
+            anywhere: the engine reads it on this page and fetches only the parts of the
+            root database it needs, from this site. Names you keep are stored in this
+            browser only.
           </p>
         </div>
 
@@ -51,10 +67,11 @@ export function About() {
           <div>
             <dt className="label">The lexicon</dt>
             <dd className="mt-1.5 text-base leading-relaxed text-ink-300">
-              {ROOT_COUNT} roots across {LANGUAGES.length} languages, each with its own
-              gloss. No single language may contribute more than four roots to one name,
-              which is what stops Greek and Latin — the deepest coverage here — from
-              answering every query between them.
+              {ROOT_COUNT} roots across {LANGUAGES.length + INVENTED.length} languages,
+              filed under {MEANING_COUNT} meanings, each with its own gloss. No single
+              language may send more than three roots to one search, which is what stops
+              Greek and Latin — the deepest coverage here — from answering every query
+              between them.
             </dd>
           </div>
           <div>
@@ -63,9 +80,41 @@ export function About() {
               {LANGUAGES.join(' · ')}
             </dd>
           </div>
+          <div>
+            <dt className="label">Invented languages</dt>
+            <dd className="mt-1.5 text-base leading-relaxed text-ink-300">
+              {INVENTED.join(' · ')}
+            </dd>
+          </div>
+          <div>
+            <dt className="label">Sources</dt>
+            <dd className="mt-1.5 text-base leading-relaxed text-ink-300">
+              Root entries are drawn from{' '}
+              <Source href="https://en.wiktionary.org">Wiktionary</Source> (CC BY-SA 4.0),
+              Strong’s Hebrew dictionary (public domain) and{' '}
+              <Source href="https://eldamo.org">Eldamo</Source> by Paul Strack (CC BY 4.0).
+              English word relations are from{' '}
+              <Source href="https://wordnet.princeton.edu">WordNet</Source>, Princeton
+              University.
+            </dd>
+          </div>
         </dl>
       </div>
     </section>
+  )
+}
+
+/** A link out to a source. Same treatment as the Phansora link in the footer. */
+function Source({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener"
+      className="text-brass-300 underline decoration-brass-300/40 underline-offset-4 transition-colors hover:text-brass-200 hover:decoration-brass-200"
+    >
+      {children}
+    </a>
   )
 }
 

@@ -1,5 +1,4 @@
 import type { Refinements, Root } from '../types'
-import type { Concept } from '../data/concepts'
 import { OVERUSED_ENDINGS, screen } from '../data/blocklist'
 import { harshness, softness, syllabify, syllableCount, vowelRatio } from './phonology'
 import type { Blend } from './blend'
@@ -64,9 +63,9 @@ function archaism(name: string): number {
  * about words, in the pool because it also carries "order" — ahead of *sýnthesis*, which
  * answers three of the five things asked for and lost on five hundredths of a weight.
  */
-export function meaningStrength(root: Root, weights: Map<Concept, number>): number {
+export function meaningStrength(root: Root, weights: Map<string, number>): number {
   const hits = root.concepts
-    .map((concept) => (weights.get(concept as Concept) ?? 0) * root.weight)
+    .map((concept) => (weights.get(concept) ?? 0) * root.weight)
     .filter((hit) => hit > 0)
     .sort((a, b) => b - a)
 
@@ -90,7 +89,7 @@ const endingOf = (name: string) => {
 export function judge(
   blend: Blend,
   refinements: Refinements,
-  weights: Map<Concept, number>,
+  weights: Map<string, number>,
 ): Judgement {
   const name = blend.name
 
@@ -133,6 +132,19 @@ export function judge(
       return { score: 0, rejected: 'both roots mean the same thing' }
     }
     const shared = blend.head.root.concepts.filter((c) => blend.tail.root.concepts.includes(c))
+    // The hand-written roots share broad tags all the time — truth and law both carry
+    // "order" — so for them an overlap is only a penalty. A dictionary root's meanings are
+    // the words of its gloss: if two of those match, the two roots say the same thing.
+    if (shared.length > 0 && (blend.head.root.pos || blend.tail.root.pos)) {
+      return { score: 0, rejected: 'both roots mean the same thing' }
+    }
+    // And "cloud" with "cloudy", or "gold" with "golden", is the same word twice.
+    if (headTop && tailTop) {
+      const [short, long] = headTop.length <= tailTop.length ? [headTop, tailTop] : [tailTop, headTop]
+      if (short.length >= 4 && long.length - short.length <= 3 && long.startsWith(short)) {
+        return { score: 0, rejected: 'both roots mean the same thing' }
+      }
+    }
     if (shared.length >= 2) overlapPenalty = 8
   }
 
@@ -209,6 +221,7 @@ export function diversify<T extends { name: string; headId: string; tailId: stri
   const endings = new Map<string, number>()
   const openings = new Map<string, number>()
   const pairs = new Set<string>()
+  const names = new Set<string>()
   const rootUse = new Map<string, number>()
 
   // Two passes: strict first, then relaxed if the strict pass could not fill the page.
@@ -217,6 +230,9 @@ export function diversify<T extends { name: string; headId: string; tailId: stri
     for (const candidate of ranked) {
       if (chosen.length >= count) break
       if (chosen.includes(candidate)) continue
+      // Two different pairs of roots can blend to the same letters. The better-scored
+      // one is already in; the second would be the same name on the page twice.
+      if (names.has(candidate.name)) continue
 
       const ending = endingOf(candidate.name)
       const opening = candidate.name.slice(0, 2)
@@ -234,6 +250,7 @@ export function diversify<T extends { name: string; headId: string; tailId: stri
 
       chosen.push(candidate)
       pairs.add(pair)
+      names.add(candidate.name)
       endings.set(ending, (endings.get(ending) ?? 0) + 1)
       openings.set(opening, (openings.get(opening) ?? 0) + 1)
       rootUse.set(candidate.headId, (rootUse.get(candidate.headId) ?? 0) + 1)

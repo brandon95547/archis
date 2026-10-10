@@ -1,6 +1,14 @@
 @import 'tailwindcss';
 
 /*
+ * Tailwind looks through every file in the project for class names. The root database is
+ * forty-eight thousand dictionary glosses — "hidden", "flex", "ring", "shadow", "table" —
+ * and each one it recognised became a rule in the stylesheet that nothing uses.
+ */
+@source not "./data/generated";
+@source not "../scripts";
+
+/*
  * Archis — a reading surface, not a dashboard.
  *
  * The palette is warm neutral rather than blue-grey: these are old words, and a cold

@@ -18,6 +18,11 @@ export type RootProvenance =
    * own and can only ever be a name's tail, so a name is never built from sound alone.
    */
   | 'phonetic'
+  /**
+   * A root from an invented language — Tolkien's Quenya, Sindarin and the rest. As real as
+   * any entry in a dictionary of them, and never an ancient one; the panel says which.
+   */
+  | 'constructed'
 
 export interface LanguageInfo {
   id: string
@@ -25,6 +30,11 @@ export interface LanguageInfo {
   /** Family or period, shown under the language name in the detail panel. */
   era: string
   provenance: RootProvenance
+  /**
+   * The wider tradition a language belongs to. The pool is capped per family as well as
+   * per language, or four Germanic languages answer a query four times over.
+   */
+  family: string
 }
 
 export interface Root {
@@ -41,8 +51,17 @@ export interface Root {
   language: string
   /** What the root means, in as few words as will carry it. */
   gloss: string
-  /** Concept tags this root can answer to. Matched against the interpreted query. */
+  /**
+   * The meanings this root answers to, as plain English words, strongest first. For the
+   * hand-written roots these are the concept tags in data/concepts.ts; for the roots
+   * taken from dictionaries they are the headwords of the gloss.
+   */
   concepts: string[]
+  /**
+   * Noun, verb or adjective, where the source dictionary says. It decides how the two
+   * glosses are put into a sentence — "the black wolf" and not "wolf and black".
+   */
+  pos?: 'n' | 'v' | 'a'
   /**
    * 0–1. How strongly the root evokes its concepts on its own — a root whose whole
    * meaning is "truth" outranks one where truth is a shade of a broader sense.
@@ -130,13 +149,6 @@ export interface GenerationResult {
   languages: string[]
   /** Set when the query matched too little to work with. */
   notice?: string
-  /**
-   * True when nothing in the query was understood and `concepts` are Archis's own.
-   *
-   * The difference between a reading and a guess is the difference between an
-   * answer and a shrug, and the page should not present them the same way.
-   */
-  guessed?: boolean
 }
 
 /**

@@ -88,10 +88,10 @@ export const LEXICON: Root[] = [
   r('la-creare', 'creāre', 'crea', 'latin', 'to make, to bring forth', ['creation'], 0.9),
   r('la-vertere', 'vertere', 'vert', 'latin', 'to turn, to change', ['transformation'], 0.8),
   r('la-serenus', 'serēnus', 'seren', 'latin', 'clear, unclouded', ['clarity', 'light'], 0.7),
-  r('la-forma', 'fōrma', 'form', 'latin', 'form, shape, mould', ['creation', 'order', 'transformation'], 0.9),
+  r('la-forma', 'fōrma', 'form', 'latin', 'form, shape, mold', ['creation', 'order', 'transformation'], 0.9),
   r('la-structura', 'strūctūra', 'struct', 'latin', 'a fitting together, a building', ['order', 'foundation', 'creation'], 0.85),
   r('la-texere', 'texere', 'tex', 'latin', 'to weave', ['creation', 'order'], 0.8),
-  r('la-fingere', 'fingere', 'fing', 'latin', 'to shape, to mould', ['creation', 'transformation'], 0.8),
+  r('la-fingere', 'fingere', 'fing', 'latin', 'to shape, to mold', ['creation', 'transformation'], 0.8),
 
   // ── Sanskrit ──────────────────────────────────────────────────────────────
   r('sa-satya', 'satya', 'saty', 'sanskrit', 'truth, what is real', ['truth'], 1),
@@ -184,7 +184,7 @@ export const LEXICON: Root[] = [
 
   // ── Hebrew & Aramaic ──────────────────────────────────────────────────────
   r('he-emet', 'ʾemet', 'emet', 'hebrew', 'truth; what holds firm', ['truth', 'foundation'], 1),
-  r('he-chokhmah', 'ḥokmāh', 'hokm', 'hebrew', 'wisdom, practised skill', ['wisdom'], 0.95),
+  r('he-chokhmah', 'ḥokmāh', 'hokm', 'hebrew', 'wisdom, practiced skill', ['wisdom'], 0.95),
   r('he-daat', 'daʿat', 'daat', 'hebrew', 'knowledge, intimate knowing', ['knowledge'], 0.95),
   r('he-binah', 'bînāh', 'bin', 'hebrew', 'understanding; telling apart', ['wisdom', 'mind'], 0.9),
   r('he-sod', 'sôd', 'sod', 'hebrew', 'secret, an inner council', ['hidden'], 0.95),

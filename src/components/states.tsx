@@ -51,11 +51,11 @@ export function NoResults({ notice }: { notice?: string }) {
     <div className="mx-auto max-w-lg py-16 text-center">
       <TriangleAlert className="mx-auto h-6 w-6 text-ink-400" aria-hidden="true" />
       <h2 className="mt-5 font-serif text-xl font-medium text-ink-100">
-        Nothing cleared the filters
+        Nothing to build from
       </h2>
       <p className="mt-3 text-base leading-relaxed text-ink-300">
         {notice
-          ?? 'Try broader ideas — single abstract concepts like truth, memory or origin give the lexicon the most to work with.'}
+          ?? 'Say what the name should mean in plain words — wolf, river, courage, gold.'}
       </p>
     </div>
   )

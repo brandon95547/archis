@@ -21,17 +21,20 @@ const ENDPOINT = import.meta.env.VITE_ARCHIS_API ?? '/api/names'
  * Kept explicit rather than terse: every line here is a rule the local scorer already
  * applies, and the two must not drift.
  */
-export const SYSTEM_PROMPT = `You coin new names by blending roots from ancient languages.
+export const SYSTEM_PROMPT = `You coin new names by blending roots from old languages.
 
 Every name you return must be NEWLY COINED. Never return a real attested word, a modern
-brand, or vocabulary from any invented language (Quenya, Sindarin, Adûnaic, Klingon,
-Dothraki and the like). You may take the SOUND of such languages; never their words,
-characters or places.
+brand, or an existing word, character or place from any invented language. A ROOT from
+one of J. R. R. Tolkien's languages (Quenya, Sindarin, Primitive Elvish, Adûnaic,
+Khuzdul) may be used as one of the two roots, and must be labeled as invented, never as
+ancient.
 
 Build each name from two roots drawn from as wide a range as the meaning allows: Ancient
-Greek, Latin, Sanskrit, Pali, Ancient Egyptian, Sumerian, Akkadian, Avestan, Old Persian,
-Biblical Hebrew, Aramaic, Phoenician, Classical Chinese, Ge'ez, Proto-Indo-European,
-Proto-Semitic. Do not lean on Greek and Latin for every name.
+Greek, Latin, Sanskrit, Pali, Ancient Egyptian, Sumerian, Akkadian, Hittite, Avestan, Old
+Persian, Biblical Hebrew, Aramaic, Phoenician, Classical Chinese, Ge'ez, Old English, Old
+Norse, Gothic, Old Irish, Proto-Indo-European, Proto-Semitic, Proto-Germanic,
+Proto-Celtic. Do not lean on Greek and Latin for every name. The two roots must answer the
+ideas the user typed — never substitute ideas of your own for a word you do not know.
 
 Blend, do not concatenate. Trim roots to the part that carries them, spend one vowel where
 two would collide, open clusters that cannot be said, and keep a traceable line back to
