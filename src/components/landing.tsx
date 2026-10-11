@@ -92,31 +92,31 @@ type Example = {
 // these three and fails if any of the names below stops coming back.
 const EXAMPLES: Example[] = [
   {
-    name: 'Emetur',
+    name: 'Leohtsoth',
     image: '/images/archis-example-ruins.webp',
     alt: 'A colonnaded temple in ruins on a headland at sunset.',
     concepts: ['truth', 'light', 'order'],
-    roots: 'emet (Hebrew: truth; what holds firm) + nur (Akkadian: light)',
-    meaning: 'Truth, brought into the light.',
-    languages: 'Hebrew, Akkadian',
+    roots: 'lēoht (light) + sōþ (truth)',
+    meaning: 'Light-truth.',
+    languages: 'Old English',
   },
   {
-    name: 'Sophokur',
+    name: 'Mnemarkhe',
     image: '/images/archis-example-middle.webp',
     alt: 'Sunrise over a range of snow-capped mountains above a still lake.',
     concepts: ['wisdom', 'memory', 'origin'],
-    roots: 'soph (Greek: wisdom, skill) + mekur (Hebrew: origin)',
-    meaning: 'Wisdom, joined to origin.',
-    languages: 'Greek, Hebrew',
+    roots: 'mnḗmē (memory, remembrance) + arkhḗ (beginning, origin)',
+    meaning: 'Memory-origin.',
+    languages: 'Ancient Greek',
   },
   {
-    name: 'Gnoseper',
+    name: 'Krypteurema',
     image: '/images/archis-example-right.webp',
     alt: 'A dark stone hall with a shaft of light falling at the far end.',
     concepts: ['hidden knowledge', 'discovery', 'transformation'],
-    roots: 'gnos (Greek: knowing, insight) + kheper (Egyptian: to come into being)',
-    meaning: 'Knowing as it becomes.',
-    languages: 'Greek, Egyptian',
+    roots: 'kryptós (concealed, hidden, secret) + heúrēma (invention, discovery)',
+    meaning: 'Hidden discovery.',
+    languages: 'Ancient Greek',
   },
 ]
 

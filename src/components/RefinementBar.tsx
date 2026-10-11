@@ -7,12 +7,17 @@ interface Props {
 }
 
 /**
- * Four dials, and no more.
+ * Five dials, and no more.
  *
  * The brief asks for a *lightweight* refinement control, which is a constraint worth
  * honouring literally: every extra filter is a decision the user has to make before they
  * are allowed to see anything, and this product's promise is that you type an idea and get
  * names. Each control here changes the output audibly. Anything that did not was cut.
+ *
+ * The fifth, Languages, is the one that was added later and the only one that changes
+ * what kind of thing comes back. By default a name is formed inside a single language by
+ * that language's own rules. Blending two languages is something no language ever did, so
+ * it has to be asked for, and this is where.
  *
  * Built as radio groups rather than selects because there are three options each — a
  * select hides two of the three behind a click for no gain, and these are choices you make
@@ -70,6 +75,19 @@ export function RefinementBar({ value, onChange, disabled }: Props) {
         ]}
         value={String(value.count)}
         onChange={(next) => set('count', Number(next))}
+        disabled={disabled}
+      />
+      {/* Last, so that the four original dials keep the row they have always had and this
+          one starts the next — on the dark side of the photograph, where it can be read. */}
+      <Group
+        label="Languages"
+        name="mix"
+        options={[
+          ['one', 'One per name'],
+          ['mixed', 'Mixed'],
+        ]}
+        value={value.mix ? 'mixed' : 'one'}
+        onChange={(next) => set('mix', next === 'mixed')}
         disabled={disabled}
       />
     </div>

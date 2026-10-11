@@ -77,6 +77,48 @@ export function meaningStrength(root: Root, weights: Map<string, number>): numbe
 /** How much of the remaining headroom each further concept answered is worth. */
 const BREADTH = 0.5
 
+/**
+ * Judge a name formed inside one language (lib/formation.ts) on how it sounds and sits.
+ *
+ * Its meaning and its grammar are settled before it gets here — the language's own rule
+ * either produced it or refused to. What is left is whether a person can say it, and the
+ * gates are a little wider than for a blend: Old English really does put four consonants
+ * in a row in Wulfstān, and a name is not wrong for sounding like its language.
+ */
+export function judgeFormed(name: string, refinements: Refinements): Judgement {
+  const blocked = screen(name)
+  if (blocked.blocked) return { score: 0, rejected: blocked.reason }
+  if (name.length < 4 || name.length > 13) return { score: 0, rejected: 'too short or too long to be a name' }
+
+  const syllables = syllableCount(name)
+  if (syllables < ABSOLUTE_SYLLABLES[0]) return { score: 0, rejected: 'only one syllable' }
+  if (syllables > ABSOLUTE_SYLLABLES[1]) return { score: 0, rejected: 'more than four syllables' }
+
+  const harsh = harshness(name)
+  if (harsh > 4.5) return { score: 0, rejected: 'consonants crowd too hard' }
+  const vowels = vowelRatio(name)
+  if (vowels < 0.27) return { score: 0, rejected: 'too few vowels to carry it' }
+  if (vowels > 0.72) return { score: 0, rejected: 'so vowel-heavy it loses its shape' }
+  if (syllabify(name).some((s) => s.nucleus.length > 2)) return { score: 0, rejected: 'three vowels run together' }
+  if (/(.)\1\1/.test(name)) return { score: 0, rejected: 'a letter three times running' }
+  if (/(.{3,})\1/.test(name)) return { score: 0, rejected: 'the same syllables twice over' }
+
+  let score = 50
+  const [lo, hi] = TARGET_SYLLABLES[refinements.length]
+  if (syllables >= lo && syllables <= hi) score += 10
+  else score -= 6 * Math.min(Math.abs(syllables - lo), Math.abs(syllables - hi))
+  if (syllables === 3) score += 3
+
+  score -= harsh * 4
+  score += (0.5 - Math.abs(vowels - 0.5)) * 16
+  score -= Math.abs(softness(name) - SOUND_TARGET[refinements.sound]) * 20
+  const eraTarget = refinements.era === 'ancient' ? 0.8 : refinements.era === 'modern' ? 0.25 : 0.5
+  score -= Math.abs(archaism(name) - eraTarget) * 16
+  if (name.length > 10) score -= (name.length - 10) * 3
+
+  return { score: Math.max(0, Math.min(100, score)) }
+}
+
 const endingOf = (name: string) => {
   const syllables = syllabify(name)
   return syllables[syllables.length - 1]?.text ?? name.slice(-2)

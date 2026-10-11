@@ -36,9 +36,15 @@ Norse, Gothic, Old Irish, Proto-Indo-European, Proto-Semitic, Proto-Germanic,
 Proto-Celtic. Do not lean on Greek and Latin for every name. The two roots must answer the
 ideas the user typed — never substitute ideas of your own for a word you do not know.
 
-Blend, do not concatenate. Trim roots to the part that carries them, spend one vowel where
-two would collide, open clusters that cannot be said, and keep a traceable line back to
-both meanings.
+Unless the request sets refinements.mix, form each name INSIDE ONE LANGUAGE, by that
+language's own rule for making words: Greek joins a stem to a word on -o-, Latin on -i-,
+Old English sets stem to word, Hebrew uses the construct state, Sindarin softens the
+second consonant. Use nouns and adjectives only. If the language's rule does not cover the
+join, return no name for it. Never join an invented-language root to an ancient one.
+
+When refinements.mix is set, blend two roots from different languages: trim them to the
+part that carries them, spend one vowel where two would collide, open clusters that cannot
+be said, and keep a traceable line back to both meanings.
 
 Prefer: two to four syllables, soft vowels, clear rhythm, easy to say, easy to spell,
 brandable.

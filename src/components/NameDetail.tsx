@@ -2,6 +2,7 @@ import { Bookmark, Check, Copy, X } from 'lucide-react'
 import { Fragment, useEffect, useRef, type ReactNode } from 'react'
 import type { GeneratedName } from '../types'
 import { LANGUAGES } from '../data/languages'
+import { checkedAgainst } from '../data/sources'
 
 /**
  * What the badge on a root says when the root is anything other than a word found in
@@ -191,7 +192,7 @@ export function NameDetail({ name, favorite, copied, onClose, onCopy, onFavorite
                   >
                     <div className="mb-3 flex flex-wrap items-center gap-2">
                       <span className="rounded bg-ink-800 px-1.5 py-0.5 text-base uppercase tracking-wider text-brass-400">
-                        {isSuffix ? 'Suffix — ends the name' : 'Root — opens the name'}
+                        {usage.role ?? (isSuffix ? 'Suffix — ends the name' : 'Root — opens the name')}
                       </span>
                       {language?.provenance !== 'attested' && (
                         <span className="rounded border border-ink-700 px-1.5 py-0.5 text-base uppercase tracking-wider text-ink-300">
@@ -214,30 +215,54 @@ export function NameDetail({ name, favorite, copied, onClose, onCopy, onFavorite
                       {/* The citation form carries diacritics the engine cannot join on, so
                           the stem is a real second form, not a repetition — but only worth
                           a row when it differs. */}
-                      {stem !== form.toLowerCase() && (
-                        <Fact label="Blendable stem">{stem}</Fact>
+                      {usage.shape ? (
+                        // Formed by the language's own rule: say which form of the word
+                        // the rule called for.
+                        <Fact label="In the name">
+                          <span className="text-brass-400">{usage.contribution}</span>
+                          <span className="text-base text-ink-300"> — {usage.shape}</span>
+                        </Fact>
+                      ) : (
+                        <>
+                          {stem !== form.toLowerCase() && (
+                            <Fact label="Blendable stem">{stem}</Fact>
+                          )}
+
+                          <Fact label={isSuffix ? 'Suffix used' : 'Root used'}>
+                            <span className="text-brass-400">
+                              {isSuffix ? `-${usage.contribution}` : usage.contribution}
+                            </span>
+                            <span className="text-base text-ink-300">
+                              {usage.contribution === stem
+                                ? ' — the whole stem'
+                                : ` — cut back from "${stem}"`}
+                            </span>
+                          </Fact>
+
+                          {/* Only when the seam ate a letter. Saying "gave -thia" when the
+                              name reads "-hia" is the kind of small lie that makes a
+                              derivation untrustworthy. */}
+                          {surface !== usage.contribution && (
+                            <Fact label="In the name">
+                              <span className="text-brass-400">{surface}</span>
+                              <span className="text-base text-ink-300">
+                                {' '}— the seam took the rest
+                              </span>
+                            </Fact>
+                          )}
+                        </>
                       )}
 
-                      <Fact label={isSuffix ? 'Suffix used' : 'Root used'}>
-                        <span className="text-brass-400">
-                          {isSuffix ? `-${usage.contribution}` : usage.contribution}
-                        </span>
-                        <span className="text-base text-ink-300">
-                          {usage.contribution === stem
-                            ? ' — the whole stem'
-                            : ` — cut back from "${stem}"`}
-                        </span>
-                      </Fact>
-
-                      {/* Only when the seam ate a letter. Saying "gave -thia" when the name
-                          reads "-hia" is the kind of small lie that makes a derivation
-                          untrustworthy. */}
-                      {surface !== usage.contribution && (
-                        <Fact label="In the name">
-                          <span className="text-brass-400">{surface}</span>
-                          <span className="text-base text-ink-300">
-                            {' '}— the seam took the rest
-                          </span>
+                      {/* How far the entry itself has been checked. Said either way: an
+                          unchecked root that looked the same as a checked one would make
+                          the check worthless. */}
+                      {usage.root.status && (
+                        <Fact label="Checked">
+                          {usage.root.status === 'verified' ? (
+                            <span className="text-ink-100">Against {checkedAgainst(usage.root.checkedBy)}</span>
+                          ) : (
+                            <span className="text-ink-300">One dictionary only — not confirmed by a second</span>
+                          )}
                         </Fact>
                       )}
                     </dl>
@@ -249,7 +274,7 @@ export function NameDetail({ name, favorite, copied, onClose, onCopy, onFavorite
 
           {/* ── how it was joined ───────────────────────────────────────── */}
           <section className="border-b border-ink-800 p-6 sm:p-8">
-            <h3 className="label mb-3">How they were blended</h3>
+            <h3 className="label mb-3">{name.language ? 'How it was formed' : 'How they were blended'}</h3>
             <p className="text-base leading-relaxed text-ink-200">{name.blendNote}</p>
 
             {name.derivation && name.derivation.length > 0 ? (
@@ -269,6 +294,7 @@ export function NameDetail({ name, favorite, copied, onClose, onCopy, onFavorite
                           </span>
                           <span className="text-base uppercase tracking-wider text-ink-300">
                             {language ? `${language.name} ${part.label}` : part.label}
+                            {part.gloss && ` — “${part.gloss}”`}
                           </span>
                         </span>
                       </Fragment>
@@ -295,9 +321,12 @@ export function NameDetail({ name, favorite, copied, onClose, onCopy, onFavorite
               </>
             ) : (
               <p className="mt-3 font-mono text-base text-ink-300">
-                {name.roots[0].contribution}
-                <span className="mx-2 text-ink-400">+</span>
-                {name.roots[1].contribution}
+                {name.roots.map((usage, index) => (
+                  <Fragment key={usage.root.id}>
+                    {index > 0 && <span className="mx-2 text-ink-400">+</span>}
+                    {usage.contribution}
+                  </Fragment>
+                ))}
                 <span className="mx-2 text-ink-400">→</span>
                 <span className="text-brass-400">{name.name.toLowerCase()}</span>
               </p>
@@ -331,9 +360,12 @@ export function NameDetail({ name, favorite, copied, onClose, onCopy, onFavorite
           {/* ── the standing disclaimer ─────────────────────────────────── */}
           <footer className="bg-ink-850 p-6 sm:px-8">
             <p className="text-base leading-relaxed text-ink-300">
-              <span className="text-ink-200">{name.name} is a new word.</span> It was coined
-              here by blending the roots above and has never been a word in any of their
-              languages. The roots are real; the name is not a historical one.
+              <span className="text-ink-200">{name.name} is a new word.</span>{' '}
+              {name.language
+                ? 'It was formed here from the words above, the way their language forms words — it is not a word that language is recorded as having.'
+                : 'It was coined here by blending the roots above, which no language ever did — it is not a historical word.'}{' '}
+              It was checked against every headword in the dictionaries Archis is built
+              from and is not among them. That is not proof that nobody has ever used it.
             </p>
           </footer>
         </div>

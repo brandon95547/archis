@@ -1,3 +1,4 @@
+import type { AttestedLoader } from './attested'
 import type { Shard, ShardLoader } from './roots'
 
 /**
@@ -14,4 +15,11 @@ export const loadShard: ShardLoader = async (index) => {
   const file = (await files)[`./generated/shards/${index}.json`]
   if (!file) throw new Error(`The root database is missing shard ${index}.`)
   return file()
+}
+
+/** The list of words that already exist — one file, fetched with the first search. */
+export const loadAttested: AttestedLoader = async () => {
+  const response = await fetch(new URL('./generated/attested.bin', import.meta.url))
+  if (!response.ok) throw new Error('The list of existing words could not be loaded.')
+  return new Uint8Array(await response.arrayBuffer())
 }

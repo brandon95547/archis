@@ -7,6 +7,7 @@
  */
 @source not "./data/generated";
 @source not "../scripts";
+@source not "../audit";
 
 /*
  * Archis — a reading surface, not a dashboard.

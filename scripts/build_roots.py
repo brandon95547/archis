@@ -27,6 +27,7 @@ root is reachable exactly when someone could plausibly type what it means.
 from __future__ import annotations
 
 import collections
+import math
 import functools
 import json
 import re
@@ -92,6 +93,9 @@ sodomy sodomite homosexual lesbian eunuch castrate castration cuckold bastard co
 catamite pimp lust lustful lewd obscene fuck cunt cock dick tit tits bitch nigger negro
 leper leprosy scab mange lice louse maggot snot spit spittle saliva phlegm belch burp
 slave enslave torture corpse carcass carrion suicide murder murderer kill killer
+abortion miscarriage childbirth childbed afterbirth placenta ulcer tumor boil abscess
+gangrene dysentery hernia hemorrhoid wart pimple scabies vermin constipation drunken
+drunkard drunkenness
 '''.split())
 
 # Things no speaker of these languages had a word for. Wiktionary records the modern
@@ -259,6 +263,12 @@ def americanize(text: str) -> str:
     return re.sub(r'[A-Za-z]+', fix, text)
 
 
+PREPOSED = re.compile(r'^(?:of|for|in|on|with|as|by|from|at|into|about|among)\b', re.I)
+DOUBT = re.compile(r'\b(?:probably|perhaps|apparently|possibly|uncertain|unknown|doubtful|dubious)\b|\?', re.I)
+NOTABLE_TAGS = {'rare', 'hapax', 'uncertain', 'poetic', 'archaic', 'obsolete', 'dialectal', 'Late-Latin',
+                'Ecclesiastical', 'Koine', 'Byzantine', 'reconstruction', 'figuratively', 'dated',
+                'nonstandard', 'neologism', 'historical', 'Epic', 'Vedic', 'Classical-Sanskrit'}
+
 HEDGE = re.compile(
     r'\b(?:properly|probably|apparently|perhaps|strictly|literally|figuratively|generally|'
     r'specifically|especially|usually|concretely|abstractly|collectively|transitively|'
@@ -279,18 +289,25 @@ def clean_gloss(text: str) -> str:
     return text
 
 
-def read_gloss(senses: list[tuple[str, list[str]]], pos: str):
+def read_gloss(senses: list[tuple[str, list[str]]], pos: str) -> list[dict]:
     """
-    (display gloss, keys, weight) for an entry, or None.
+    The readings of an entry — display gloss, keys, weight, and how each was arrived at.
 
-    Only the first sense that yields a key is used. Dictionaries list the core meaning
-    first and the stretched ones after it; a root reachable through its fifth sense would
-    answer a query with something its own entry barely supports.
+    At most two, from the first three senses. Dictionaries list the core meaning first
+    and the stretched ones after it, so a root reachable through its fifth sense would
+    answer a query with something its own entry barely supports. But the first sense
+    alone is too strict: Wiktionary opens basileús with "chief, master" and only then
+    says "king". Each reading keeps its own gloss, so a name built on the second sense
+    says the second sense.
     """
     for raw, _tags in senses[:3]:
         if any(word in CRUDE for word in re.findall(r'[a-z]+', raw.lower())):
-            return None
-    for index, (raw, _tags) in enumerate(senses[:3]):
+            return []
+    readings: list[dict] = []
+    taken: set[str] = set()
+    for index, (raw, tags) in enumerate(senses[:3]):
+        if len(readings) == 2:
+            break
         text = clean_gloss(raw)
         if not text or len(text) > 140:
             continue
@@ -314,7 +331,13 @@ def read_gloss(senses: list[tuple[str, list[str]]], pos: str):
         shown: list[str] = []
         rescued = False
         for bare, said, is_verb in bared:
-            if not said or said[:1].isupper() and len(bared) > 1:
+            # "Of, for music, musical" and "floor, of a building" are one description
+            # that a comma happens to run through. Whatever follows the preposition
+            # is the rest of a phrase, not another meaning.
+            if PREPOSED.match(said):
+                break
+            # A proper name is not a meaning: "the Mediterranean Sea" is not "sea".
+            if not said or (said[:1].isupper() and len(bared) > 1) or re.search(r'\b[A-Z]', said[1:]):
                 continue
             core = BE.sub('', said) if is_verb else said
             words = core.lower().split()
@@ -325,22 +348,37 @@ def read_gloss(senses: list[tuple[str, list[str]]], pos: str):
                 # "wild boar", "great king": the head noun, at a discount.
                 key = lemma_key(words[1], 'n')
                 rescued = key is not None
+            # A root is filed only under meanings its displayed gloss actually states: a
+            # key taken from the fifth alternative would answer a search with a name
+            # whose card says something else.
+            label = ('to ' + said) if bare.lower().startswith('to ') else said
+            if len(shown) >= 3 or len(', '.join(shown + [label])) > 46:
+                break
+            shown.append(label)
             if key and key not in keys:
                 keys.append(key)
-            label = ('to ' + said) if bare.lower().startswith('to ') else said
-            if len(shown) < 3 and len(', '.join(shown + [label])) <= 46:
-                shown.append(label)
-            if len(keys) >= 3:
-                break
+        keys = [key for key in keys if key not in taken]
         if not keys or not shown:
             continue
-        weight = 0.9 if index == 0 and len(alts) == 1 else 0.85 if index == 0 else 0.75
+        taken.update(keys)
+        weight = 0.9 if len(alts) == 1 else 0.85
+        if readings:
+            weight -= 0.07
+        # "Drunken company" was filed under "company" on the strength of its head noun.
+        # That is a loose match, and it should lose to any root that simply means company.
         if rescued:
-            weight = min(weight, 0.75)
+            weight = min(weight, 0.6)
         gloss = ', '.join(shown)
         gloss = gloss[0].lower() + gloss[1:] if gloss[:2] != 'I ' else gloss
-        return gloss, keys, weight
-    return None
+        readings.append({
+            'gloss': gloss, 'keys': keys, 'weight': weight,
+            # What the audit wants to know about this reading: which sense it came from,
+            # whether the key is only the head of a two-word gloss, whether the source
+            # itself hedged ("probably", "perhaps", a question mark), and its usage tags.
+            'sense': index, 'rescued': rescued,
+            'hedged': bool(DOUBT.search(raw)), 'tags': sorted(set(tags) & NOTABLE_TAGS),
+        })
+    return readings
 
 
 # ── spelling a root so it can be said ──────────────────────────────────────────────────
@@ -595,6 +633,116 @@ def stem_sumerian(roman: str) -> str:
     return fold(s, {'ĝ': 'g', 'š': 'sh', 'ḫ': 'kh', 'ř': 'r'})
 
 
+def fold_greek(roman: str) -> str:
+    return re.sub(r'(?<![aeo])u', 'y', fold(roman))
+
+
+def fold_indic(roman: str) -> str:
+    text = unicodedata.normalize('NFC', roman.lower())
+    for src, dst in INDIC.items():
+        text = text.replace(src, dst)
+    text = strip_marks(text)
+    text = text.replace('ch', '\0').replace('c', 'ch').replace('\0', 'ch')
+    return re.sub(r'[^a-z]', '', text)
+
+
+def fold_hebrew(xlit: str) -> str:
+    s = unicodedata.normalize('NFC', xlit.lower())
+    for src, dst in (('ôw', 'o'), ('ûw', 'u'), ('îy', 'i'), ('êy', 'e'), ('ʼ', ''), ('ʻ', ''),
+                     ('ᵉ', 'e'), ('ch', 'h'), ('th', 't'), ('tṭ', 't')):
+        s = s.replace(src, dst)
+    return re.sub(r'([^aeiou])\1', r'\1', fold(s))
+
+
+HEBREW_VOWEL = 'aeiouâêîôûᵉăĕŏ'
+
+
+def hebrew_construct(xlit: str) -> str:
+    """
+    The construct state — the "X of" form a Hebrew noun takes in front of another — by
+    the three regular changes: feminine -āh becomes -at, the diphthongs contract (bayit →
+    bêt, māwet → môt), and a long a before the stress shortens to a murmur (dāvār →
+    dəvar), except after a guttural. Irregular constructs are not known here.
+    """
+    s = unicodedata.normalize('NFC', xlit.lower())
+    guttural = s[:1] in 'ʼʻh' or s[:2] == 'ch'
+    if s.endswith('âh'):
+        s = s[:-2] + 'ath'
+    s = s.replace('ayi', 'êy')
+    s = s.replace('âve', 'ôw')
+    match = re.match(rf'^([^{HEBREW_VOWEL}]*)â([^{HEBREW_VOWEL}])(?=[{HEBREW_VOWEL}])', s)
+    if match and not guttural:
+        s = match.group(1) + 'ᵉ' + s[match.end(1) + 1:]
+    return fold_hebrew(s)
+
+
+def word_and_comb(lang: str, entry: dict, word: str, roman: str | None, pos: str, stem: str):
+    """
+    (final, combining): how the root is written as the LAST element of a compound, and
+    as the FIRST. A language builds a compound out of a stem and a whole word — lyk-o-nyx
+    is the stem of lýkos and the whole of nýx — and the blending stem above, which is cut
+    for sound, is neither.
+    """
+    genitive = (entry.get('genitive') or [None])[0]
+    gen_roman = (entry.get('gen_roman') or [None])[0]
+    if lang == 'greek':
+        final = fold_greek(roman)
+        comb = stem
+        if gen_roman:
+            gen = fold_greek(gen_roman)
+            # i- and u-stems keep their vowel in front of the link: physi-o-, ikhthy-o-.
+            if gen.endswith('eos') and final.endswith(('is', 'ys')):
+                comb = final[:-1]
+            else:
+                cut = strip_end(gen, ('eos', 'ous', 'os', 'ou', 'es', 'as'))
+                if cut != gen and cut[:2] == final[:2]:
+                    comb = cut
+        return final, comb
+    if lang == 'latin':
+        final = fold(word)
+        comb = stem
+        if genitive and pos == 'a':
+            gen = fold(genitive)
+            cut = strip_end(gen, ('ae', 'is', 'i'))
+            if cut != gen and cut[:2] == final[:2]:
+                comb = cut
+        return final, comb
+    if lang in ('sanskrit', 'pali'):
+        final = fold_indic(roman or word)
+        return final, final
+    if lang == 'oldenglish':
+        return fold(word, {'ċ': 'ch', 'ġ': 'g', 'ð': 'th', 'þ': 'th', 'æ': 'ae', 'ǣ': 'ae'}), stem
+    if lang == 'oldnorse':
+        table = {'ð': 'd', 'þ': 'th', 'ǫ': 'o', 'ø': 'o'}
+        final = fold(word, table)
+        # akr is akr-s in the genitive: that r is part of the word, not its ending.
+        if genitive and fold(genitive, table).startswith(final):
+            return final, final
+        return final, strip_end(final, ('inn', 'ur', 'r', 'i', 'a'), 3) if pos != 'v' else stem
+    if lang == 'gothic':
+        return fold(roman, {'þ': 'th', 'ƕ': 'hw'}), stem
+    if lang == 'pgmc':
+        return fold(word, {'þ': 'th', 'ð': 'd'}), stem
+    if lang == 'pcelt':
+        final = fold(word.replace('xs', 'x'))
+        if final.endswith(('us', 'is')):
+            return final, final[:-1]
+        if genitive and not final.endswith(('os', 'om', 'a')):
+            gen = fold(genitive)
+            if gen.endswith('os') and gen[:2] == final[:2]:
+                return final, gen[:-2]
+        return final, stem
+    if lang == 'akkadian':
+        final = re.sub(r'm$', '', fold(word, SEMITIC))
+        construct = (entry.get('construct') or [None])[0]
+        return final, fold(construct, SEMITIC) if construct else ''
+    if lang == 'aramaic':
+        return fold(roman, SEMITIC), stem
+    if lang == 'geez':
+        return stem, stem
+    return stem, stem
+
+
 def stem_elvish(value: str) -> str:
     s = re.sub(r'[¹²³⁴⁵⁶⁷⁸⁹⁰]', '', value)
     s = re.sub(r'\([^)]*\)', '', s).strip('-')
@@ -614,7 +762,7 @@ def lemmas(name: str):
     stemming rules get rewritten far more often than the dump changes.
     """
     cache = CACHE / f'{name}.lemmas.jsonl'
-    if cache.exists() and not REFRESH:
+    if cache.exists() and (CACHE / f'{name}.words.json').exists() and not REFRESH:
         with cache.open(encoding='utf8') as handle:
             for line in handle:
                 yield json.loads(line)
@@ -622,19 +770,31 @@ def lemmas(name: str):
 
     CACHE.mkdir(exist_ok=True)
     kept = []
+    words: list[list[str]] = []
     with (SRC / f'{name}.jsonl').open(encoding='utf8') as handle:
         for line in handle:
             entry = json.loads(line)
+            # Every headword, whatever its part of speech, goes on the list of words that
+            # already exist — a coined name must not turn out to be one of them.
+            if entry.get('pos') not in ('character', 'symbol', 'romanization') and any(
+                    'form_of' not in sense for sense in entry.get('senses', [])):
+                romans = [f['form'] for f in entry.get('forms') or [] if 'romanization' in f.get('tags', [])]
+                words.append([entry['word'], plain_roman(romans) or ''])
             if entry.get('pos') not in KAIKKI_POS:
                 continue
             # A word whose leading sense is an obscenity does not get to be offered under
             # its polite second one: Latin cōleus is "courage" only the way "balls" is.
-            if any(RUDE_TAGS & set(sense.get('tags') or []) for sense in entry.get('senses', [])[:3]):
+            # A later sense that is merely disparaging is a different matter — rēx is also
+            # "tyrant" — and only that sense is passed over.
+            leading = entry.get('senses', [])[:3]
+            if leading and RUDE_TAGS & set(leading[0].get('tags') or []):
+                continue
+            if any({'vulgar', 'slur'} & set(sense.get('tags') or []) for sense in leading):
                 continue
             senses = []
             for sense in entry.get('senses', []):
                 tags = sense.get('tags') or []
-                if 'form_of' in sense or 'alt_of' in sense or BAD_SENSE_TAGS & set(tags):
+                if 'form_of' in sense or 'alt_of' in sense or (BAD_SENSE_TAGS | RUDE_TAGS) & set(tags):
                     continue
                 glosses = sense.get('glosses') or []
                 if glosses:
@@ -644,21 +804,26 @@ def lemmas(name: str):
             forms = entry.get('forms') or []
             roman = [f['form'] for f in forms if 'romanization' in f.get('tags', [])]
             canonical = [f['form'] for f in forms if 'canonical' in f.get('tags', [])]
-            genitive = [f['form'] for f in forms
-                        if 'genitive' in f.get('tags', []) and 'plural' not in f.get('tags', [])
-                        and 'dual' not in f.get('tags', [])]
+            genitives = [f for f in forms
+                         if 'genitive' in f.get('tags', []) and 'plural' not in f.get('tags', [])
+                         and 'dual' not in f.get('tags', [])]
+            genitive = [f['form'] for f in genitives]
+            construct = [f['form'] for f in forms if 'construct' in f.get('tags', [])]
             kept.append({
                 'word': entry['word'],
                 'pos': entry['pos'],
                 'roman': roman[:3],
                 'canonical': canonical[:1],
                 'genitive': genitive[:1],
+                'gen_roman': [f['roman'] for f in genitives if f.get('roman')][:1],
+                'construct': construct[:1],
                 'senses': senses[:4],
                 'rank': len(entry.get('descendants') or []) + len(entry.get('derived') or []),
             })
     with cache.open('w', encoding='utf8') as handle:
         for item in kept:
             handle.write(json.dumps(item, ensure_ascii=False) + '\n')
+    (CACHE / f'{name}.words.json').write_text(json.dumps(words, ensure_ascii=False), encoding='utf8')
     yield from kept
 
 
@@ -742,16 +907,17 @@ def from_kaikki(lang: str, name: str):
         else:
             raise ValueError(lang)
 
-        read = read_gloss([(g, t) for g, t in entry['senses']], pos)
-        if not read or not valid_stem(stem):
+        if not valid_stem(stem):
             continue
-        gloss, keys, weight = read
-        if is_root:
-            pos = root_pos(gloss, keys[0])
-        yield {
-            'lang': lang, 'form': form, 'stem': stem, 'gloss': gloss, 'keys': keys,
-            'pos': pos, 'weight': weight, 'rank': entry['rank'] + (4 if is_root else 0),
-        }
+        for read in read_gloss([(g, t) for g, t in entry['senses']], pos):
+            sense_pos = root_pos(read['gloss'], read['keys'][0]) if is_root else pos
+            final, comb = word_and_comb(lang, entry, word, roman, sense_pos, stem)
+            yield {
+                **read, 'lang': lang, 'form': form, 'stem': stem, 'pos': sense_pos,
+                'rank': entry['rank'] + (4 if is_root else 0),
+                'source': f'wiktionary:{name}', 'native': word, 'roman': roman or '',
+                'entry_pos': entry['pos'], 'final': final, 'comb': comb,
+            }
 
 
 def root_pos(gloss: str, key: str) -> str:
@@ -766,29 +932,67 @@ def root_pos(gloss: str, key: str) -> str:
     return 'v' if wn.synsets(key, 'v') else 'a'
 
 
+NIQQUD = re.compile(r'[\u0591-\u05c7]')
+
+
+def hebrew_skeleton(word: str) -> str:
+    """A Hebrew word without its vowel points, which is how Wiktionary files it."""
+    return NIQQUD.sub('', unicodedata.normalize('NFD', word))
+
+
 def from_strongs():
+    """
+    Biblical Hebrew and Aramaic. Strong's decides what is biblical; it is not always the
+    best witness to what a word plainly means — šālôm is defined as "safe, i.e. well,
+    happy, friendly" and reaches "peace" in its last clause. Where Wiktionary has the same
+    word and its plain gloss also stands in Strong's own definition or among the King
+    James renderings, that gloss is added as a second reading. Two sources agreeing is
+    also the definition of verified, and such a reading is marked so.
+    """
+    plain: dict[str, list] = collections.defaultdict(list)
+    for entry in lemmas('Hebrew'):
+        if entry['pos'] in ('noun', 'adj', 'verb'):
+            plain[hebrew_skeleton(entry['word'])].append(entry)
+
     text = (SRC / 'strongs-hebrew.js').read_text(encoding='utf8')
     start = text.index('{', text.index('var strongsHebrewDictionary'))
     data = json.loads(text[start: text.rindex('}') + 1])
-    for entry in data.values():
+    for number, entry in data.items():
         xlit = entry.get('xlit', '')
         definition = entry.get('strongs_def', '')
         if not xlit or not definition or xlit[:1].isupper() or xlit.lstrip('ʼʻ')[:1].isupper():
             continue
         aramaic = '(Aramaic)' in entry.get('derivation', '') + definition
         definition = definition.replace('(Aramaic)', '')
-        pos = 'v' if clean_gloss(definition).lower().startswith('to ') else 'n'
-        read = read_gloss([(definition.split(';')[0], [])], pos)
         stem = stem_hebrew(xlit)
-        if not read or not valid_stem(stem):
+        if not valid_stem(stem):
             continue
-        gloss, keys, weight = read
-        pos = root_pos(gloss, keys[0])
-        yield {
-            'lang': 'aramaic' if aramaic else 'hebrew', 'form': xlit, 'stem': stem,
-            'gloss': gloss, 'keys': keys, 'pos': pos, 'weight': weight,
-            'rank': 2 if 'primitive' in entry.get('derivation', '') else 0,
-        }
+        pos = 'v' if clean_gloss(definition).lower().startswith('to ') else 'n'
+        readings = read_gloss([(clause, []) for clause in definition.split(';')[:3]], pos)
+
+        # The plainer gloss, if two sources stand behind it.
+        witness = (definition + ' ' + entry.get('kjv_def', '')).lower()
+        have = {key for read in readings for key in read['keys']}
+        if not aramaic:
+            for other in plain.get(hebrew_skeleton(entry.get('lemma', '')), []):
+                # mlk is both "king" and "to reign"; the noun's gloss is not the verb's.
+                if (other['pos'] == 'verb') != (pos == 'v'):
+                    continue
+                for read in read_gloss([(g, t) for g, t in other['senses'][:1]], KAIKKI_POS[other['pos']]):
+                    agreed = [k for k in read['keys'] if re.search(rf'\b{k}\b', witness) and k not in have]
+                    if agreed:
+                        have.update(agreed)
+                        readings.append({**read, 'keys': agreed, 'gloss': ', '.join(agreed), 'sense': 0,
+                                         'weight': 0.9, 'hedged': False, 'agrees': 'Wiktionary'})
+
+        for read in readings:
+            sense_pos = root_pos(read['gloss'], read['keys'][0])
+            yield {
+                **read, 'lang': 'aramaic' if aramaic else 'hebrew', 'form': xlit, 'stem': stem, 'pos': sense_pos,
+                'rank': 2 if 'primitive' in entry.get('derivation', '') else 0,
+                'source': f'strongs:{number}', 'native': entry.get('lemma', ''), 'roman': xlit,
+                'entry_pos': sense_pos, 'final': fold_hebrew(xlit), 'comb': hebrew_construct(xlit),
+            }
 
 
 ELDAMO_LANGS = {
@@ -820,19 +1024,26 @@ def from_eldamo():
         if ' ' in value or value[:1].isupper() and speech != 'root':
             continue
         pos = ELDAMO_POS[speech]
-        read = read_gloss([(gloss_raw.replace('*', '').replace('?', ''), [])], pos)
+        read = next(iter(read_gloss([(gloss_raw.replace('*', '').replace('?', ''), [])], pos)), None)
         stem = stem_elvish(value)
         if not read or not valid_stem(stem):
             continue
-        gloss, keys, weight = read
         is_root = speech == 'root'
         if is_root:
-            pos = root_pos(gloss, keys[0])
+            pos = root_pos(read['gloss'], read['keys'][0])
+        # Eldamo cites the page of Tolkien's writing each form is taken from. A form its
+        # editors reconstructed themselves is starred, and a doubted gloss carries "?".
+        read['hedged'] = read['hedged'] or '?' in gloss_raw or '*' in gloss_raw
         yield {
-            'lang': lang,
+            **read, 'lang': lang,
             'form': ('√' if is_root else '') + re.sub(r'[¹²³⁴⁵⁶⁷⁸⁹⁰]', '', value),
-            'stem': stem, 'gloss': gloss, 'keys': keys, 'pos': pos, 'weight': weight,
-            'rank': 4 if is_root else 0,
+            'stem': stem, 'pos': pos, 'rank': 4 if is_root else 0,
+            'source': f"eldamo:{word.get('l')}", 'native': value, 'roman': '',
+            'entry_pos': speech, 'page': word.get('page-id') or '',
+            'cited': len(word.findall('ref')), 'mark': word.get('mark') or '',
+            # Quenya nouns often compound on a longer stem than they are cited with:
+            # oron "mountain" is oront- inside a word.
+            'final': stem, 'comb': stem_elvish(word.get('stem') or '') or stem,
         }
 
 
@@ -844,6 +1055,134 @@ SOURCES = [
     ('oldenglish', 'OldEnglish'), ('oldnorse', 'OldNorse'), ('gothic', 'Gothic'),
     ('pgmc', 'ProtoGermanic'), ('oldirish', 'OldIrish'), ('pcelt', 'ProtoCeltic'),
 ]
+
+QUESTIONABLE_TAGS = {'rare', 'hapax', 'uncertain', 'nonstandard', 'neologism'}
+
+
+def audit(c: dict, verifier) -> tuple[str, str, str]:
+    """
+    (status, by, why) for one root.
+
+      verified    — a second, independent source has the same word with the same meaning;
+                    for Tolkien's languages, Eldamo cites the page he wrote it on.
+      flagged     — something about the entry is doubtful or could not be reconciled with
+                    a second source, and `why` says what. Flagged roots stay in the
+                    database and are never used to build a name.
+      unconfirmed — one source, nothing wrong with it, nothing to check it against.
+    """
+    doubts = []
+    if c['hedged']:
+        doubts.append('the source itself hedges this meaning')
+    if c['sense'] > 1:
+        doubts.append('only the third sense of the word')
+    if QUESTIONABLE_TAGS & set(c['tags']):
+        doubts.append('marked ' + ', '.join(sorted(QUESTIONABLE_TAGS & set(c['tags']))) + ' by the source')
+
+    if c['source'].startswith('eldamo:'):
+        if '*' in c.get('mark', ''):
+            doubts.append('a form reconstructed by Eldamo, not written by Tolkien')
+        if c.get('cited', 0) == 0:
+            doubts.append('no citation to Tolkien\'s writing')
+        if doubts:
+            return 'flagged', '', '; '.join(doubts)
+        return 'verified', 'eldamo', ''
+
+    if c.get('agrees') and not doubts:
+        return 'verified', 'wiktionary-he', ''
+    found = verifier.check(c) if verifier else {'status': 'unconfirmed', 'by': None, 'note': ''}
+    if found['status'] == 'conflict':
+        # Not proof of an error — "shrill" against "loud-sounding" trips this too — but a
+        # meaning no second source could be matched to is not one to build a name on
+        # until a person has looked.
+        doubts.append(f"a second dictionary has the word, but its meaning could not be matched to ours ({found.get('note') or found.get('by')})")
+    if doubts:
+        return 'flagged', '', '; '.join(doubts)
+    if found['status'] == 'verified':
+        return 'verified', str(found.get('by') or ''), ''
+    return 'unconfirmed', '', ''
+
+
+def load_verifier():
+    """scripts/verify_roots.py, if it and its second sources are there. Optional."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from verify_roots import Verifier
+        return Verifier(SRC)
+    except Exception as error:  # noqa: BLE001 — a missing second source must not stop a build
+        print(f'  (no second-source check: {error})')
+        return None
+
+
+# ── names that already exist ──────────────────────────────────────────────────────────
+
+BLOOM_BITS_PER_WORD = 8
+BLOOM_HASHES = 6
+
+
+def fnv(text: str, seed: int) -> int:
+    h = (0x811C9DC5 ^ seed) & 0xFFFFFFFF
+    for byte in text.encode('utf8'):
+        h = ((h ^ byte) * 0x01000193) & 0xFFFFFFFF
+    return h
+
+
+def attested_words() -> set[str]:
+    """
+    Every headword in every source, spelled the way a coined name would spell it.
+
+    A compound built by a language's own rules will sometimes be a word that language
+    already had — lyk-ánthrōpos, Mor-dor. Those are not coinages, and a name offered as
+    new must not be one. Headwords only: an inflected form that happens to coincide is
+    not caught, and the page says what was and was not checked.
+    """
+    out: set[str] = set()
+    for lang, name in SOURCES:
+        for word, roman in json.loads((CACHE / f'{name}.words.json').read_text(encoding='utf8')):
+            try:
+                final, _ = word_and_comb(lang, {}, word, roman or word, 'n', '')
+            except Exception:  # noqa: BLE001 — a headword in an unexpected script is skipped
+                continue
+            if lang == 'egyptian':
+                final = stem_egyptian(word)
+            elif lang == 'sumerian':
+                final = stem_sumerian(roman or '')
+            elif lang in ('hittite', 'oldirish', 'pie', 'oldpersian', 'geez'):
+                final = fold(roman or word, SEMITIC if lang == 'geez' else IRANIAN if lang == 'oldpersian' else None)
+            if final:
+                out.add(final)
+    text = (SRC / 'strongs-hebrew.js').read_text(encoding='utf8')
+    for entry in json.loads(text[text.index('{', text.index('var strongsHebrewDictionary')): text.rindex('}') + 1]).values():
+        out.add(fold_hebrew(entry.get('xlit', '')))
+    # Tolkien's words in every period, and his names of people and places above all.
+    for word in ET.parse(SRC / 'eldamo-data.xml').getroot().iter('word'):
+        if not set(word.get('mark') or '') & set('!'):
+            out.add(stem_elvish(word.get('v') or ''))
+            out.add(stem_elvish(word.get('v') or '').replace('k', 'c'))
+    # And English itself. Old English hunta + -ing is formed exactly as the rule says and
+    # comes out "hunting", which is a word, just not one of theirs.
+    try:
+        for word in Path('/usr/share/dict/american-english').read_text(encoding='utf8').split():
+            if re.fullmatch(r'[a-z]+', word):
+                out.add(word)
+    except FileNotFoundError:
+        print('  (no English word list at /usr/share/dict — English words are not filtered)')
+    return {w for w in out if 4 <= len(w) <= 16}
+
+
+def bloom(words: set[str]) -> bytes:
+    """A Bloom filter. The reader in src/data/attested.ts tests the same seven bits."""
+    size = max(8, len(words) * BLOOM_BITS_PER_WORD)
+    size += -size % 8
+    bits = bytearray(size // 8)
+    for word in words:
+        for seed in range(BLOOM_HASHES):
+            bit = fnv(word, seed * 0x9E3779B1 & 0xFFFFFFFF) % size
+            bits[bit >> 3] |= 1 << (bit & 7)
+    return bytes(bits)
+
+
+BLOODLESS = {'noun.act', 'noun.communication', 'noun.process', 'noun.relation', 'noun.quantity',
+             'noun.motive', 'noun.shape', 'noun.possession', None}
 
 SHARDS = 512
 
@@ -861,17 +1200,24 @@ def shard_of(word: str) -> int:
 PER_KEY = 2
 
 
+def fame(c: dict) -> float:
+    """
+    How well known a word is, as a nudge to its weight: −0.05 to +0.14.
+
+    Wiktionary lists the words derived from an entry and the words descended from it.
+    Lýkos has seventy-two and a poetic rarity for "wolf" has none, and nothing else in
+    the data says as plainly which of the two a Greek speaker would have reached for.
+    Sources that record no such thing (Strong's, Eldamo) are left at nought.
+    """
+    if not c['source'].startswith('wiktionary:'):
+        return 0.0
+    return -0.05 if c['rank'] == 0 else min(math.log2(c['rank'] + 1), 7) * 0.02
+
+
 def candidate_score(c: dict) -> float:
     length = len(c['stem'])
     shape = 2 if 3 <= length <= 6 else 1 if length in (2, 7) else 0
-    return c['weight'] * 10 + shape + min(c['rank'], 6) * 0.5 - 0.3 * (len(c['keys']) - 1)
-
-
-def curated_stems() -> set[tuple[str, str]]:
-    """(language, stem) of every hand-written root, so the dictionaries do not repeat them."""
-    text = (ROOT / 'src' / 'data' / 'lexicon.ts').read_text(encoding='utf8')
-    return {(m.group(2), m.group(1))
-            for m in re.finditer(r"r\('[^']+',\s*'(?:[^'\\]|\\.)*',\s*'([a-z]+)',\s*'([a-z]+)'", text)}
+    return c['weight'] * 10 + shape + fame(c) * 40 - 0.3 * (len(c['keys']) - 1)
 
 
 def curated_keys() -> set[str]:
@@ -881,12 +1227,12 @@ def curated_keys() -> set[str]:
 
 
 def select(candidates: list[dict]) -> list[dict]:
-    taken = curated_stems()
+    # A root the hand-written lexicon also has is kept here all the same. The lexicon's
+    # copy is cut for blending; this one carries the stem and word forms a real compound
+    # needs, and it is the one that has been checked against a second dictionary.
     best: dict[tuple[str, str], list[dict]] = collections.defaultdict(list)
     seen: dict[tuple[str, str], set[str]] = collections.defaultdict(set)
     for c in sorted(candidates, key=candidate_score, reverse=True):
-        if (c['lang'], c['stem']) in taken:
-            continue
         # The same stem twice is one root listed under two spellings or two dictionaries
         # — unless the meanings share nothing, in which case they are homonyms.
         if seen[c['lang'], c['stem']] & set(c['keys']):
@@ -932,7 +1278,12 @@ def top_senses(word: str):
         # "crow" the verb is to boast. Someone naming a thing after a crow means the bird.
         if animal and (pos != 'n' or rank > 0) and synset.lexname() != 'verb.motion':
             continue
-        if first and (count * 10 >= top or (pos == 'n' and synset.lexname() in CONCRETE)):
+        # "Bear" is a verb in running text and an animal in a request for a name, so an
+        # animal is always kept. But "a simple" is a medicinal herb, and nobody typing
+        # "simple" means that: any other thing-noun has to be a real share of the word.
+        thing = pos == 'n' and (synset.lexname() == 'noun.animal'
+                                or (synset.lexname() in CONCRETE and (top < 5 or count * 10 >= top)))
+        if first and (count * 10 >= top or thing):
             picked.append(synset)
         elif not first and count * 2 >= max(top, 1):
             picked.append(synset)
@@ -956,8 +1307,18 @@ def names(synset) -> list[str]:
     typing "melody" means the wind. A neighbour is kept when this sense is one of the two
     it is best known for.
     """
-    return [l.name().lower() for l in synset.lemmas()
+    return [tagged(l.name().lower(), synset) for l in synset.lemmas()
             if '_' not in l.name() and synset in leading_senses(l.name().lower())]
+
+
+def tagged(word: str, synset) -> str:
+    """
+    A neighbour and the part of speech it is a neighbour in: "fleet:a".
+
+    "Fast" is near "fleet" the adjective. Without the tag the reader would also fetch
+    fleet the noun, and a search for speed would come back with a navy.
+    """
+    return f"{word}:{'a' if synset.pos() in ('a', 's') else synset.pos()}"
 
 
 def expand(word: str, keys: set[str], cover: dict[str, int]) -> list[list[str]]:
@@ -965,7 +1326,8 @@ def expand(word: str, keys: set[str], cover: dict[str, int]) -> list[list[str]]:
 
     def add(candidates, tier):
         for cand in candidates:
-            if cand != word and cand in keys and cand not in GENERIC_KEYS:
+            plain = cand.split(':')[0]
+            if plain != word and plain in keys and plain not in GENERIC_KEYS:
                 near[cand] = min(near.get(cand, tier), tier)
 
     for synset in top_senses(word):
@@ -973,9 +1335,9 @@ def expand(word: str, keys: set[str], cover: dict[str, int]) -> list[list[str]]:
         for lemma in synset.lemmas():
             if lemma.name().lower() != word:
                 continue
-            add([d.name().lower() for d in lemma.derivationally_related_forms()
+            add([tagged(d.name().lower(), d.synset()) for d in lemma.derivationally_related_forms()
                  if d.synset() in leading_senses(d.name().lower())], 1)
-            add([p.name().lower() for p in lemma.pertainyms()], 0)
+            add([tagged(p.name().lower(), p.synset()) for p in lemma.pertainyms()], 0)
         if synset.pos() in ('a', 's'):
             for similar in synset.similar_tos():
                 add(names(similar), 1)
@@ -1007,7 +1369,7 @@ def expand(word: str, keys: set[str], cover: dict[str, int]) -> list[list[str]]:
     for cand, tier in near.items():
         tiers[tier].append(cand)
     limits = (5, 5, 4)
-    return [sorted(tier, key=lambda k: -cover[k])[:limit] for tier, limit in zip(tiers, limits)]
+    return [sorted(tier, key=lambda k: -cover[k.split(':')[0]])[:limit] for tier, limit in zip(tiers, limits)]
 
 
 def build_thesaurus(keys: set[str], cover: dict[str, int]) -> dict[str, str]:
@@ -1036,6 +1398,19 @@ def main() -> None:
         candidates += got
 
     roots = select(candidates)
+    with (CACHE / 'roots.selected.jsonl').open('w', encoding='utf8') as handle:
+        for c in roots:
+            handle.write(json.dumps(c, ensure_ascii=False) + '\n')
+
+    verifier = load_verifier()
+    tally: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    flagged_rows = []
+    for c in roots:
+        c['status'], c['by'], c['why'] = audit(c, verifier)
+        tally[c['lang']][c['status']] += 1
+        if c['status'] == 'flagged':
+            flagged_rows.append([c['lang'], c['form'], c['gloss'], c['source'], c['why']])
+
     cover: dict[str, int] = collections.Counter()
     for c in roots:
         for key in c['keys']:
@@ -1055,9 +1430,19 @@ def main() -> None:
         # most sayable stem should be the one a language sends: lýkos before a rare
         # poetic word for wolf that happens to sort first.
         length = len(c['stem'])
-        weight = c['weight'] + min(c['rank'], 8) * 0.01 + (0.02 if 3 <= length <= 5 else -0.04 if length >= 8 else 0)
+        weight = c['weight'] + fame(c) + (0.02 if 3 <= length <= 5 else -0.04 if length >= 8 else 0)
+        # A loose match — the head noun of a longer gloss — must stay under the bar a name
+        # is built on (FIRM in localNameService.ts), however well known the word is.
+        if c['rescued']:
+            weight = min(weight, 0.48)
         form = unicodedata.normalize('NFC', c['form'])
-        row = [c['lang'], form, c['stem'], c['gloss'], ' '.join(c['keys']), c['pos'], round(min(weight, 0.98), 2)]
+        final = c['final'] if valid_stem(c['final']) or len(c['final']) > 9 else ''
+        # "Son of the wolf" is a name; "son of the delivery" is a form letter. Nouns that
+        # name an act, a process or a relation take no kinship or diminutive ending.
+        field = leading_lexname(c['keys'][0])['n']
+        kin = 1 if c['pos'] == 'n' and field not in BLOODLESS else 0
+        row = [c['lang'], form, c['stem'], c['gloss'], ' '.join(c['keys']), c['pos'], round(min(weight, 0.99), 2),
+               final, '' if c['comb'] == final else c['comb'], c['status'][0], c['by'], kin]
         for key in c['keys']:
             shards[shard_of(key)]['r'].setdefault(key, []).append(row)
     for word, tiers in thesaurus.items():
@@ -1074,16 +1459,35 @@ def main() -> None:
         sizes.append(len(text.encode('utf8')))
         (out / f'{index}.json').write_text(text, encoding='utf8')
 
+    words = attested_words()
+    (OUT / 'attested.bin').write_bytes(bloom(words))
+
+    # The flagged roots, for a person to read. They are in the shards too, marked.
+    audit_dir = ROOT / 'audit'
+    audit_dir.mkdir(exist_ok=True)
+    with (audit_dir / 'flagged-roots.tsv').open('w', encoding='utf8') as handle:
+        handle.write('language\tform\tgloss\tsource\twhy flagged\n')
+        for row in sorted(flagged_rows):
+            handle.write('\t'.join(str(cell).replace('\t', ' ') for cell in row) + '\n')
+
     by_lang = collections.Counter(c['lang'] for c in roots)
+    status = collections.Counter(c['status'] for c in roots)
     stats = {'roots': len(roots), 'meanings': len(cover), 'words': len(thesaurus),
-             'shards': SHARDS, 'languages': dict(sorted(by_lang.items()))}
+             'shards': SHARDS, 'attested': len(words),
+             'verified': status['verified'], 'unconfirmed': status['unconfirmed'], 'flagged': status['flagged'],
+             'languages': dict(sorted(by_lang.items())),
+             'audit': {lang: dict(counts) for lang, counts in sorted(tally.items())}}
     (OUT / 'stats.ts').write_text(
         '// Written by scripts/build_roots.py — the tally of the generated root database.\n'
         f'export const STATS = {json.dumps(stats, indent=2)} as const\n', encoding='utf8')
 
     print(f'\n{len(roots)} roots, {len(cover)} meanings, {len(thesaurus)} thesaurus words')
+    print(f"  {'':12} {'roots':>6} {'verified':>9} {'unconf.':>8} {'flagged':>8}")
     for lang, count in by_lang.most_common():
-        print(f'  {lang:12} {count}')
+        t = tally[lang]
+        print(f"  {lang:12} {count:6} {t['verified']:9} {t['unconfirmed']:8} {t['flagged']:8}")
+    print(f"  {'all':12} {len(roots):6} {status['verified']:9} {status['unconfirmed']:8} {status['flagged']:8}")
+    print(f'  {len(words)} existing words in the filter, {len(bloom(words)) / 1024:.0f} KB')
     print(f'  {SHARDS} shards, {sum(sizes) / 1024:.0f} KB in all, largest {max(sizes) / 1024:.1f} KB')
 
 

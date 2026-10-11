@@ -17,8 +17,14 @@ import type { Root } from '../types'
 /** Must match SHARDS in scripts/build_roots.py. */
 export const SHARDS = 512
 
-/** language, citation form, stem, gloss, meanings, part of speech, weight */
-type Row = [string, string, string, string, string, 'n' | 'v' | 'a', number]
+/**
+ * language, citation form, blending stem, gloss, meanings, part of speech, weight,
+ * whole word, combining stem (empty when the same), audit status, checked against,
+ * takes kinship endings
+ */
+type Row = [string, string, string, string, string, 'n' | 'v' | 'a', number, string, string, 'v' | 'u' | 'f', string, 0 | 1]
+
+const STATUS = { v: 'verified', u: 'unconfirmed', f: 'flagged' } as const
 
 export interface Shard {
   t: Record<string, string>
@@ -40,11 +46,14 @@ export function shardOf(word: string): number {
 export interface Entry {
   /** Roots that mean exactly this. Empty when no language here has a word for it. */
   roots: Root[]
-  /** Nearby meanings in three tiers, closest first: synonyms, kin, distant kin. */
+  /**
+   * Nearby meanings in three tiers, closest first: synonyms, kin, distant kin. Each is
+   * written "word:pos" — "fleet:a" is fleet the adjective, and only its adjective roots.
+   */
   near: [string[], string[], string[]]
 }
 
-const toRoot = ([language, form, stem, gloss, meanings, pos, weight]: Row): Root => {
+const toRoot = ([language, form, stem, gloss, meanings, pos, weight, word, comb, status, by, kin]: Row): Root => {
   const concepts = meanings.split(' ')
   return {
     // Stable across rebuilds as long as the root itself is: a kept name stores its roots
@@ -57,6 +66,11 @@ const toRoot = ([language, form, stem, gloss, meanings, pos, weight]: Row): Root
     concepts,
     weight,
     pos,
+    word: word || undefined,
+    comb: comb || word || undefined,
+    status: STATUS[status],
+    checkedBy: by || undefined,
+    kin: kin === 1,
   }
 }
 

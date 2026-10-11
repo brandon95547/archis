@@ -2,14 +2,17 @@
 
 New names, built from ancient roots. A Phansora product.
 
-You type the ideas a name should carry — `wolf, winter, loyal` — and Archis finds the roots
-that mean those things across the old languages and blends them into words that have
-never been said. Click a name and it shows exactly what it was made from.
+You type the ideas a name should carry — `wolf, night` — and Archis finds the words for
+them across the old languages and forms a new word from them **the way their own language
+forms words**: Greek *lyk-o-nyx*, Latin *lup-i-nox*, Old Norse *nátt-úlf*, Sindarin
+*draug-fuin*. Click a name and it shows the roots, what each means, and the rule that
+joined them.
 
 **Every name is newly coined.** The roots are real dictionary entries; the names are not.
-Nothing here is presented as a historical word, and the detail panel says so on every
-name. Roots from Tolkien's invented languages are in the database too, and are always
-labeled as invented, never as ancient.
+Nothing is presented as a historical word, every name is checked against the headwords of
+every source, and the panel says exactly what was and was not checked. Roots from Tolkien's
+invented languages are in the database too: always labeled as invented, never joined to
+an ancient root.
 
 ## Running it
 
@@ -22,12 +25,14 @@ Nothing to configure. The name engine runs in the browser, and the root database
 already in the repository (`src/data/generated/`), so a build needs nothing but Node.
 
 ```bash
-npx jiti scripts/battery.ts        # ~90 everyday searches through the real engine
-npx jiti scripts/battery.ts wolf   # the names for one query, with their roots
+npx jiti scripts/battery.ts               # ~90 everyday searches through the real engine
+npx jiti scripts/battery.ts --mix         # the same, with cross-language blending on
+npx jiti scripts/battery.ts "wolf, night" # the names for one query, with their roots
 ```
 
-The battery exits non-zero if any of its queries goes unread, or if one root keeps
-answering unrelated queries. Run it after touching the reader, the scorer or the database.
+The battery exits non-zero if a query goes unread or comes back with no names, if one root
+keeps answering unrelated queries, or if a worked example on the landing page is no longer
+what the engine returns. Run it after touching the reader, the engine or the database.
 
 ## How a name is made
 
@@ -59,64 +64,71 @@ to the vocabulary. They read like ordinary English and are not: `order` is cosmi
 hand-written roots carrying it (ʾemet, kittu, *ʾ-m-n, kun) are truth roots in traditions
 where what is firm and what is true are one word.
 
-**2. Gather roots** — `src/data/lexicon.ts` and `src/data/generated/`
-Two sources, searched together:
+**2. Form the name** — `src/lib/formation.ts` *(the default)*
+Two roots from **one** language, joined by that language's own rule; or one root with one
+of that language's own name endings. Nothing is cut for sound and nothing is borrowed
+across languages.
 
-- **The lexicon**: ~185 hand-written roots for the ideas Archis was first built around,
-  each tagged and weighed by hand.
-- **The database**: ~48,000 roots across 27 languages, generated from dictionaries by
-  `scripts/build_roots.py` (see *The root database* below).
+| language | how it joins two words | a real word made the same way |
+|---|---|---|
+| Ancient Greek | stem + **-o-** + word; the -o- drops before a vowel | *phil-ó-sophos* |
+| Latin | stem + **-i-** + word | *agr-i-cola* |
+| Sanskrit, Pali | stem + stem; vowels that meet merge (a + u → o) | *sūrya + udaya → sūryodaya* |
+| Old English, Old Norse | bare stem straight onto the word | *Wulf-stān*, *Ás-garðr* |
+| Gothic, Proto-Germanic | stem + **-a-** + word | *figgr-a-gulþ* |
+| Proto-Celtic | stem + **-o-** + word | Gaulish *Dumn-o-rīx* |
+| Old Persian | stem + **-a-** + word | *Arta-xšaça* |
+| Hebrew | first noun in the construct state ("X of") | *bêt-leḥem* |
+| Akkadian | construct state + genitive | *šar māti* |
+| Sumerian | owner second, marked with -a(k) | *lugal kalam-ma* |
+| Egyptian | one noun directly after another | *nb tꜣwy* |
+| Ge'ez | first noun takes -a | *nəguśa nagaśt* |
+| Quenya | stem + word; consonants assimilate (n + s → ss) | *elen + sar → Elessar* |
+| Sindarin | second word's first consonant softens (c → g) | *mor + coth → Morgoth* |
+| Khuzdul, Adûnaic, Black Speech | describing word first | *Kheled-zâram*, *Nazg-ûl* |
 
-Each root carries two forms. `form` is the citation shape — how the tradition actually
-writes it, diacritics and all — and it is what the detail panel shows. `stem` is what the
-engine may cut up: plain ASCII, no laryngeals. Reconstructed roots cannot be blended in
-their cited shape at all; `*ǵneh₃-` has to be `gno` before anything can be built from it.
+Single-root names use the language's own name elements — Greek *-ídēs* "son of", Latin
+*-ānus* "of", Old English *-ing* "descendant of", Quenya *-ndil* "friend of", Sumerian
+*En-* "lord of", Aramaic *Bar-* "son of" — each with the example it is modelled on.
 
-The pool is capped at three roots per language and six per family (four for the invented
-languages together). Greek and Latin have the deepest coverage for almost any meaning, so
-an unbounded best-match pass returns a Greek-and-Latin page every time — the caps force
-the pool wide before the scorer sees it. Within a language the picks are spread across
-the ideas asked for, so `wolf, night` gets a wolf and a night from each, not two nights.
+The rules that keep this honest:
 
-**3. Blend** — `src/lib/blend.ts` and `src/lib/phonology.ts`
-Never concatenate. Every join trims a root back to the part that carries it, spends one
-vowel where two would collide, or opens a cluster that cannot be said:
+- **A language with no rule here forms no names.** Old Irish compounds lose vowels by
+  rules this code does not model; Proto-Indo-European and Primitive Elvish roots cannot
+  be said as cited. They stay in the database and are used only in blends.
+- **A join the rule does not cover returns nothing.** Quenya allows only certain
+  consonant clusters; a compound that would produce another is not Quenya and is dropped.
+- **Nouns and adjectives only.** A verb needs its own derivation before it can sit in a
+  compound — Latin *victor* is built on *vict-*, not *vincere* — and that is not guessed.
+- **Each root is used in the form the rule calls for.** The database stores, beside the
+  citation form, the *combining stem* (Greek *nykt-*, Latin *noct-*, Hebrew construct
+  *bêt*) and the *whole word* (*nyx*, *nox*, *bayit*). The panel shows which went in.
+- **The reading is literal.** "Night-wolf", "King of the land", "Son of the wolf" — the
+  glosses of the parts in the order the grammar puts them, and nothing added.
 
-| at the seam | what happens |
-|---|---|
-| same vowel twice | spent once — `soph` + `ia` |
-| two different vowels | kept if English reads them as one sound, else the first gives way |
-| two consonants | joined if the mouth already makes that pair, else a linking vowel opens it, harmonised to the vowel before |
-| vowel then consonant | nothing to negotiate |
+**3. Or blend** — `src/lib/blend.ts` *(only with Languages → Mixed)*
+The original engine: two roots from two different languages, cut and fused by sound. No
+language ever made a word this way, so it is something the user asks for. Every join
+trims a root back to the part that carries it, spends one vowel where two would collide,
+or opens a cluster that cannot be said. An invented-language root is never blended with
+an ancient one. The pool is capped at three roots per language and six per family, which
+is what stops Greek and Latin from answering every query between them.
 
-Syllabification is by maximal onset against a table of onsets an English reader starts a
-syllable with. Everything works on romanised letters rather than IPA, deliberately: the
-output is a name someone has to look at and say, so the spelling is the thing being judged.
-
-**4. Judge** — `src/lib/score.ts`
+**4. Judge** — `src/lib/score.ts` and `src/services/localNameService.ts`
 Rejection and ranking are separate. A hard rule written as a heavy penalty is eventually
 outweighed by something else and ships the name anyway.
 
-How well a root answers the query is depth *and* breadth: the best-matching concept leads,
-and each further concept the root also answers takes a share of the room left above it, so
-the figure approaches 1 without ever reaching it on breadth alone. Depth alone was the
-original rule, and it quietly filled the pool with whatever the lexicon weighed highest —
-*lógos*, a root about words, arriving ahead of *sýnthesis* on a query about synthesis
-because it happened to also carry `order`.
+Rejected outright, in either mode: a root flagged in the audit; a name that is already a
+headword in any source (see *Names that already exist*); brand lookalikes; unfortunate
+substrings; fewer than two syllables or more than four; crowded consonants; too few or too
+many vowels; two roots that mean the same thing; and anything scoring under a fixed floor.
+**A weak name is left out rather than shown** — a search can come back with four names
+instead of nine, and the page says so.
 
-Rejected outright: brand lookalikes (edit distance, scaled to length), vocabulary from
-invented languages, unfortunate substrings, one syllable or more than four, crowded
-consonants, too few or too many vowels, three vowels in a row, a leading root that does not
-answer the query, and two roots that mean the same thing — "light joined to light" is a
-stutter, not a meaning.
-
-Ranked on: meaning strength, requested length, flow, requested sound and era, how the name
-lands (a final vowel or sonorant beats a chopped stop), and a penalty for the endings the
-brief calls out — `-ora`, `-ara` and their family.
-
-Then `diversify` walks the ranked list and takes a name only if it differs from what is
-already taken: a different ending, a different opening, a different pair of roots. Without
-it the same two roots return a dozen near-identical blends and crowd out everything else.
+Ranked on: how directly the roots answer what was asked, whether a second dictionary
+confirms them, requested length, sound and era, and how the name lands. The page is then
+spread across languages — two names from any one language before a third — with the
+invented languages last, together.
 
 ## Invented languages
 
@@ -129,8 +141,14 @@ Sindarin, Telerin, Adûnaic, Khuzdul, Black Speech and Westron — taken from
 - **Always labeled.** These languages have the provenance `constructed`, and the detail
   panel badges every such root *Invented language*. They are never listed as ancient.
 - **Roots, not words.** A name may be built from an Elvish root; it may not *be* an
-  existing Elvish word, name or place. `src/data/blocklist.ts` drops any output that
-  lands on one.
+  existing Elvish word, name or place. Every form Eldamo records — Tolkien's names of
+  people and places included — is on the list a coined name is checked against.
+- **Never mixed with a real language.** An Elvish name is built from Elvish roots by
+  Elvish rules. Even with blending on, an invented root is not fused to an ancient one.
+- **Tolkien's rules.** Quenya's cluster limits and assimilations, Sindarin's soft
+  mutation of a compound's second element, and the name endings he used (-ndil, -ion,
+  -iel, -wen) are what `src/lib/formation.ts` applies. Primitive Elvish roots are not
+  turned into Quenya or Sindarin words: that takes sound laws this code does not have.
 
 Separately, the lexicon has a handful of **euphonic endings** — `-iel`, `-ael`, `-eth`,
 `-yr` — syllable shapes that carry no meaning at all. They may only close a name, never
@@ -162,21 +180,60 @@ licenses require it:
 CC BY-SA is share-alike: the generated database in `src/data/generated/` is a derivative
 of Wiktionary and stays under CC BY-SA 4.0 whatever the rest of the code is licensed as.
 
-**What gets in.** A dictionary entry becomes a root only when its leading sense comes
-down to a plain English word people actually type (that word is how a query finds it),
-its stem can be said, and its meaning is one a name can stand on. Modern coinages in old
-languages are dropped — Wiktionary has a Sanskrit word for coffee — as are obscenities,
-and any word whose first sense is one. Each language keeps at most two roots per meaning.
+**Checked against, not shipped.** `scripts/verify_roots.py` confirms entries against a
+second dictionary per language — Liddell–Scott–Jones and Strong's for Greek, Lewis & Short
+and Whitaker's Words for Latin, Monier-Williams for Sanskrit, the PTS and New Concise
+dictionaries for Pali, Bosworth–Toller for Old English, Zoëga and Cleasby–Vigfusson for
+Old Norse, Wright's glossary for Gothic, Brown–Driver–Briggs for Hebrew, SEDRA for Syriac,
+ePSD2 for Sumerian, the ORACC glossaries for Akkadian and the Thesaurus Linguae Aegyptiae
+for Egyptian. Their URLs and licenses are in that file's header. None of their text is in
+the app or the repository; two of them (PTS, SEDRA) are licensed for non-commercial use,
+which reading them on the build machine to check a headword is and shipping them would
+not be. Old Irish, Ge'ez, Hittite and Old Persian have no second source and are all
+*unconfirmed*; the reconstructed languages are checked against their own attested
+descendants.
+
+**What gets in.** A dictionary entry becomes a root only when one of its first two senses
+comes down to a plain English word people actually type (that word is how a query finds
+it), its stem can be said, and its meaning is one a name can stand on. Each sense is its
+own entry with its own gloss, so a name built on a word's second sense says the second
+sense. Modern coinages in old languages are dropped — Wiktionary has a Sanskrit word for
+coffee — as are obscenities and any word whose leading sense is one. Each language keeps
+at most two roots per meaning, the better-attested first.
+
+**The audit.** Every entry carries one of three marks, shown in the detail panel:
+
+- *verified* — a second, independent source has the same word with an agreeing meaning
+  (`scripts/verify_roots.py` lists the second sources); for Tolkien's languages, Eldamo
+  cites the page he wrote it on.
+- *unconfirmed* — one source, nothing against it, nothing to check it against.
+- *flagged* — the source itself hedges the meaning, or marks the word rare or uncertain,
+  or the meaning is only the word's third sense, or a second source has the word and its
+  meaning could not be matched to ours, or (Tolkien) the form is an editor's
+  reconstruction or has no citation. Flagged entries stay in the database, are never used
+  to build a name, and are listed with the reason in `audit/flagged-roots.tsv`.
+
+A flag is a reason to look, not a verdict. The second-source match is by shared words and
+synonyms, so "shrill" against "loud-sounding" is flagged alongside real errors; the list
+is there so a person can clear the first kind and fix the second.
+
+The build prints the tally per language, and the About section shows the totals.
+
+**Names that already exist.** A compound built by a language's own rules is sometimes a
+word that language already had — *lyk-ánthrōpos*, *Mor-dor*. `src/data/generated/attested.bin`
+is a Bloom filter over every headword in every source (about 150,000, Tolkien's names of
+people and places included), and a name found in it is dropped. It knows headwords only:
+an inflected form, or a word no source here records, is not caught, and the detail panel
+says so instead of claiming a name has never been used.
 
 **How it is stored.** One file would be a megabyte to download before the first name. The
 database is cut into 512 shards by a hash of the English word, each shard its own
 fingerprinted file, and a search fetches only the few that hold the words it used.
 
 **What is not in it.** Avestan, Phoenician and Proto-Semitic have no machine-readable
-dump at the source used, so those three still have only their hand-written roots.
-Classical Chinese likewise. The generated entries have not been proofread one by one:
-the gloss and citation form on each are the dictionary's, and the detail panel shows both
-so a name can be checked before it is used.
+dump at the source used, so those three still have only their hand-written roots, which
+are used in blends only. Classical Chinese likewise. No fictional language other than
+Tolkien's is included: each needs an openly licensed lexicon first.
 
 ## The service seam
 

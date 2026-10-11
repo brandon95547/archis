@@ -1,5 +1,6 @@
 import { Bookmark, Check, Copy } from 'lucide-react'
 import type { GeneratedName } from '../types'
+import { LANGUAGES, languageName } from '../data/languages'
 
 interface Props {
   name: GeneratedName
@@ -14,10 +15,10 @@ interface Props {
 /**
  * One name, at a glance.
  *
- * The card shows four things and stops: the name, how to say it, one line of meaning, and
- * the two actions. Roots, languages and derivation all live in the detail panel — putting
- * them here would turn a list you scan into a page you read, and the whole point of the
- * grid is to let someone find the two names worth opening.
+ * The card shows five things and stops: the name, how to say it, one line of meaning, the
+ * language it was made in, and the two actions. Roots and derivation live in the detail
+ * panel — putting them here would turn a list you scan into a page you read, and the
+ * whole point of the grid is to let someone find the two names worth opening.
  *
  * The card is a button, and the two actions are buttons inside it. Nested interactive
  * elements are invalid HTML, so the card's own hit area is an absolutely-positioned
@@ -27,6 +28,13 @@ interface Props {
 export function NameCard({
   name, index, favorite, copied, onOpen, onCopy, onFavorite,
 }: Props) {
+  // One language for a name formed by that language's rules; two for a blend. A euphonic
+  // ending is a sound, not a language, and is not listed as one.
+  const codes = [...new Set(name.roots.map((usage) => usage.root.language))]
+    .filter((code) => code !== 'euphonic')
+  const languages = codes.map(languageName)
+  const invented = codes.some((code) => LANGUAGES[code]?.provenance === 'constructed')
+
   return (
     <li
       className="surface surface-hover rise group relative flex flex-col p-5"
@@ -49,6 +57,13 @@ export function NameCard({
         </p>
         <p className="mt-3 text-base leading-relaxed text-ink-300">
           {name.interpretation}
+        </p>
+        {/* Which language made it. A name formed inside one language is that language's
+            kind of word, and an invented language is said to be one here, on the card,
+            not only in the panel behind it. */}
+        <p className="label mt-3">
+          {languages.join(' + ')}
+          {invented && <span className="text-brass-400"> · invented</span>}
         </p>
       </div>
 

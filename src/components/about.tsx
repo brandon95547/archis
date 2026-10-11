@@ -28,9 +28,12 @@ const invented = (code: string) => LANGUAGE_INFO[code]?.provenance === 'construc
 const LANGUAGES = named(CODES.filter((code) => !invented(code)))
 const INVENTED = named(CODES.filter(invented))
 
-const ROOT_COUNT = (STATS.roots + LEXICON.filter((r) => r.language !== 'euphonic').length)
-  .toLocaleString('en-US')
-const MEANING_COUNT = STATS.meanings.toLocaleString('en-US')
+const count = (n: number) => n.toLocaleString('en-US')
+const ROOT_COUNT = count(STATS.roots)
+const MEANING_COUNT = count(STATS.meanings)
+const VERIFIED = count(STATS.verified)
+const UNCONFIRMED = count(STATS.unconfirmed)
+const FLAGGED = count(STATS.flagged)
 
 export function About() {
   return (
@@ -41,8 +44,9 @@ export function About() {
         <div className="space-y-4 text-base leading-relaxed text-ink-300">
           <p>
             Archis coins names. You say what a name should carry — an idea, a quality, a
-            thing — and it finds the roots that hold those ideas across the old languages,
-            then blends them into a word that has never been said.
+            thing — and it finds the words for those ideas across the old languages, then
+            forms a new word from them the way their own language forms words: Greek on a
+            linking -o-, Old English stem to stem, Sindarin by softening a consonant.
           </p>
           <p>
             <span className="text-ink-100">Every name here is newly coined.</span> The roots
@@ -52,8 +56,9 @@ export function About() {
           </p>
           <p>
             Most of the roots are ancient. Some come from the languages J. R. R. Tolkien
-            invented, and a root from one of those is marked as an invented-language root
-            wherever it appears — it is never passed off as an old one.
+            invented, and a name made from those is marked as an invented-language name
+            wherever it appears — it is never passed off as an old one, and an invented
+            root is never joined to an ancient one.
           </p>
           <p>
             It runs in your browser. There is no account and your search is never sent
@@ -67,11 +72,17 @@ export function About() {
           <div>
             <dt className="label">The lexicon</dt>
             <dd className="mt-1.5 text-base leading-relaxed text-ink-300">
-              {ROOT_COUNT} roots across {LANGUAGES.length + INVENTED.length} languages,
-              filed under {MEANING_COUNT} meanings, each with its own gloss. No single
-              language may send more than three roots to one search, which is what stops
-              Greek and Latin — the deepest coverage here — from answering every query
-              between them.
+              {ROOT_COUNT} root entries across {LANGUAGES.length + INVENTED.length}{' '}
+              languages, filed under {MEANING_COUNT} meanings, each with its own gloss.
+            </dd>
+          </div>
+          <div>
+            <dt className="label">How far it has been checked</dt>
+            <dd className="mt-1.5 text-base leading-relaxed text-ink-300">
+              {VERIFIED} entries are confirmed by a second, independent dictionary — or,
+              for Tolkien’s languages, by a citation to his own writing. {UNCONFIRMED}{' '}
+              stand on one source. {FLAGGED} are flagged as doubtful; they stay in the
+              database and are never used to build a name.
             </dd>
           </div>
           <div>
@@ -95,7 +106,10 @@ export function About() {
               <Source href="https://eldamo.org">Eldamo</Source> by Paul Strack (CC BY 4.0).
               English word relations are from{' '}
               <Source href="https://wordnet.princeton.edu">WordNet</Source>, Princeton
-              University.
+              University. Entries are cross-checked against Liddell–Scott–Jones, Lewis &
+              Short, Monier-Williams, Bosworth–Toller, Cleasby–Vigfusson, Brown–Driver–Briggs
+              and the other dictionaries named on each root; none of their text is included
+              here.
             </dd>
           </div>
         </dl>

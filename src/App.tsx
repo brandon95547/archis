@@ -18,6 +18,7 @@ const DEFAULT_REFINEMENTS: Refinements = {
   sound: 'balanced',
   era: 'balanced',
   count: 9,
+  mix: false,
 }
 
 export default function App() {

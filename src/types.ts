@@ -63,6 +63,31 @@ export interface Root {
    */
   pos?: 'n' | 'v' | 'a'
   /**
+   * The root as the LAST element of a compound: the whole word, in plain letters. Greek
+   * nýx is "nyx" here. Only the roots taken from dictionaries have one.
+   */
+  word?: string
+  /**
+   * The root as the FIRST element of a compound: its combining stem. Greek nýx is "nykt",
+   * which is what nykt-o-phýlax is built on. Absent when it is the same as `word`.
+   */
+  comb?: string
+  /**
+   * How far the entry has been checked. `verified`: a second, independent source gives
+   * the same word the same meaning. `unconfirmed`: one source, nothing against it.
+   * `flagged`: something about it is doubtful — it stays in the database and is never
+   * used to build a name.
+   */
+  status?: 'verified' | 'unconfirmed' | 'flagged'
+  /** What it was checked against, when it was. */
+  checkedBy?: string
+  /**
+   * Whether the noun can sensibly take a kinship or diminutive ending. "Son of the wolf"
+   * is a name; "son of the delivery" is not, and nouns that name an act or a process are
+   * marked so here.
+   */
+  kin?: boolean
+  /**
    * 0–1. How strongly the root evokes its concepts on its own — a root whose whole
    * meaning is "truth" outranks one where truth is a shade of a broader sense.
    */
@@ -78,6 +103,12 @@ export interface Refinements {
   sound: Sound
   era: Era
   count: number
+  /**
+   * False, the default: every name is formed inside ONE language, by that language's own
+   * rules. True: two roots from different languages may be blended — which no language
+   * ever did, so it is something the user asks for, not something they are handed.
+   */
+  mix: boolean
 }
 
 export interface RootUsage {
@@ -92,6 +123,13 @@ export interface RootUsage {
    * because a remote service may not track its joins this closely.
    */
   surface?: string
+  /**
+   * What this root is doing in a name formed by a language's own rules — "Head", or
+   * "Describes the head". Absent on a cross-language blend, which has no grammar.
+   */
+  role?: string
+  /** Which form of the root went in: "combining stem", "whole word", "construct state". */
+  shape?: string
 }
 
 /**
@@ -109,6 +147,8 @@ export interface DerivationPart {
   rootId?: string
   /** How to name this piece in the panel: 'root', 'suffix', 'linking vowel'. */
   label: string
+  /** For a name element that is not a root in the database — what "-ion" means. */
+  gloss?: string
 }
 
 export interface GeneratedName {
@@ -128,6 +168,12 @@ export interface GeneratedName {
    */
   derivation?: DerivationPart[]
   roots: RootUsage[]
+  /**
+   * The one language the name was formed in. Absent when it is a blend of two — and the
+   * difference matters: a name with a language follows that language's rules for making
+   * words, and a blend follows none.
+   */
+  language?: string
   syllables: number
   variants: string[]
   /** 0–100, only used for ordering. Never shown as a number; a score is not a fact. */

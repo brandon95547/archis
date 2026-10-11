@@ -329,6 +329,8 @@ const PREAMBLE = /^\s*(?:(?:a|an|some|good|cool|new)\s+)*(?:names?|ideas?)\s+(?:
 const WEIGHT = {
   direct: 1,
   curated: 0.95,
+  /** The vocabulary's extra ideas for a word that has roots of its own: "star" is also sky. */
+  aside: 0.7,
   /** For a word with no root of its own, where the thesaurus is all there is. */
   near: [0.8, 0.6, 0.4],
   /** For a word that has roots, when the query is too thin to blend from alone. */
@@ -385,8 +387,19 @@ function spellings(raw: string): string[] {
  */
 export async function interpret(query: string, db: RootDatabase): Promise<Interpretation> {
   const weights = new Map<string, number>()
-  const bump = (meaning: string, amount: number) => {
-    weights.set(meaning, Math.max(weights.get(meaning) ?? 0, amount))
+  // A meaning reached through the thesaurus is reached in one part of speech: "fast" is
+  // near "fleet" the adjective, not "fleet" the navy. A meaning the user typed is theirs
+  // in every sense, and is never restricted.
+  const only = new Map<string, string>()
+  const bump = (meaning: string, amount: number, pos?: string) => {
+    const before = weights.get(meaning) ?? 0
+    if (amount > before) {
+      weights.set(meaning, amount)
+      if (pos) only.set(meaning, pos)
+      else only.delete(meaning)
+    } else if (amount === before && !pos) {
+      only.delete(meaning)
+    }
   }
 
   // Accents come off first, or "café" arrives as "caf".
@@ -422,7 +435,7 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
 
   for (const { word, own } of read) {
     if (own) bump(word, WEIGHT.direct)
-    WORDS[word]?.forEach((m) => bump(m, WEIGHT.curated))
+    WORDS[word]?.forEach((m) => bump(m, own && m !== word ? WEIGHT.aside : WEIGHT.curated))
   }
 
   // Now the kin. A word with no root of its own is nothing but its kin, so they count
@@ -431,11 +444,18 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
   const thin = weights.size < ENOUGH
   for (const { word, entry, own } of read) {
     const placed = own || Boolean(WORDS[word])
-    if (placed && !thin) continue
-    const scale = placed ? WEIGHT.widen : WEIGHT.near
+    // "Strong" has roots, but they are all adjectives, and a name needs a noun to stand
+    // on. Its kin — strength — are what it would have been asked for as a thing.
+    const nounless = entry.roots.length > 0 && !entry.roots.some((root) => root.pos === 'n')
+    if (placed && !thin && !nounless) continue
+    const scale = placed && !nounless ? WEIGHT.widen : WEIGHT.near
     entry.near.forEach((tier, depth) => {
       const amount = scale[depth]
-      if (amount) tier.forEach((m) => bump(m, amount))
+      if (!amount) return
+      tier.forEach((tagged) => {
+        const [meaning, pos] = tagged.split(':')
+        bump(meaning, amount, pos)
+      })
     })
   }
   if (thin) {
@@ -447,8 +467,15 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
 
   const fetched = await db.lookup(weights.keys())
   const roots = new Map<string, Root>()
-  for (const entry of fetched.values()) {
-    for (const root of entry.roots) roots.set(root.id, root)
+  for (const [meaning, entry] of fetched) {
+    const pos = only.get(meaning)
+    for (const root of entry.roots) {
+      if (pos && root.pos !== pos) continue
+      // A root found through one meaning must not also score for another it carries
+      // in the wrong part of speech.
+      const concepts = root.concepts.filter((c) => !only.has(c) || only.get(c) === root.pos)
+      roots.set(root.id, concepts.length === root.concepts.length ? root : { ...root, concepts })
+    }
   }
 
   const concepts = [...weights.entries()]

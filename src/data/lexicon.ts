@@ -214,15 +214,18 @@ export const LEXICON: Root[] = [
   r('ph-yada', 'ydʿ (yada)', 'yada', 'phoenician', 'to know', ['knowledge'], 0.8),
 
   // ── Classical Chinese ─────────────────────────────────────────────────────
+  // Chinese is full of homophones, and two roots here share a stem with another (zhī 知
+  // and zhì 智, míng 名 and míng 明). They used to be told apart by an added letter —
+  // "zhir", "mingm" — which is a spelling nobody ever used. The stems are the real ones now.
   r('zh-zhen', '真 zhēn', 'zhen', 'chinese', 'true, genuine', ['truth'], 0.95),
   r('zh-dao', '道 dào', 'dao', 'chinese', 'the way; the course of things', ['path', 'law', 'order'], 0.95),
   r('zh-zhi', '智 zhì', 'zhi', 'chinese', 'wisdom', ['wisdom'], 0.9),
-  r('zh-zhi2', '知 zhī', 'zhir', 'chinese', 'to know', ['knowledge'], 0.85),
+  r('zh-zhi2', '知 zhī', 'zhi', 'chinese', 'to know', ['knowledge'], 0.85),
   r('zh-ming', '明 míng', 'ming', 'chinese', 'bright, clear-sighted', ['light', 'clarity'], 0.9),
   r('zh-yuan', '元 yuán', 'yuan', 'chinese', 'origin, the first', ['origin', 'beginning'], 0.9),
   r('zh-xuan', '玄 xuán', 'xuan', 'chinese', 'dark, deep, mysterious', ['hidden', 'depth'], 0.95),
   r('zh-li', '理 lǐ', 'li', 'chinese', 'pattern, the grain of things', ['order', 'law'], 0.85),
-  r('zh-mingn', '名 míng', 'mingm', 'chinese', 'name', ['name'], 0.9),
+  r('zh-mingn', '名 míng', 'ming', 'chinese', 'name', ['name'], 0.9),
   r('zh-yan', '言 yán', 'yan', 'chinese', 'word, to speak', ['word', 'speech'], 0.85),
   r('zh-ji', '記 jì', 'ji', 'chinese', 'to record, to remember', ['memory'], 0.85),
   r('zh-xin', '心 xīn', 'xin', 'chinese', 'heart-mind', ['mind', 'consciousness'], 0.85),
