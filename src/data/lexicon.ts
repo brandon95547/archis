@@ -19,6 +19,16 @@ import type { Root } from '../types'
  * traditions and the pool is built to make that possible.
  */
 
+/**
+ * Entries the audit could find in no dictionary it had: Wiktionary has no Ge'ez, Avestan
+ * or Phoenician page for them and there was no second source for those languages. They
+ * are very likely real words. They are marked unconfirmed all the same, because "very
+ * likely" is not what the mark means.
+ */
+const UNCONFIRMED = new Set([
+  'gz-tebab', 'gz-berhan', 'gz-gize', 'gz-fetrat', 'av-raocah', 'ph-dabar', 'ph-ur',
+])
+
 const r = (
   id: string,
   form: string,
@@ -27,7 +37,16 @@ const r = (
   gloss: string,
   concepts: string[],
   weight = 0.7,
-): Root => ({ id, form, stem, language, gloss, concepts, weight })
+): Root => ({
+  id, form, stem, language, gloss, concepts, weight,
+  // Every other entry was found, form and meaning, in a dump or a second dictionary or on
+  // its Wiktionary page when the lexicon was audited. A euphonic ending is not a word and
+  // has nothing to check.
+  ...(language === 'euphonic' ? {} : {
+    status: UNCONFIRMED.has(id) ? 'unconfirmed' as const : 'verified' as const,
+    checkedBy: UNCONFIRMED.has(id) ? undefined : 'audit',
+  }),
+})
 
 export const LEXICON: Root[] = [
   // ── Ancient Greek ─────────────────────────────────────────────────────────
@@ -41,11 +60,11 @@ export const LEXICON: Root[] = [
   r('gr-arche', 'arkhḗ', 'arkh', 'greek', 'beginning; first principle', ['origin', 'foundation', 'law'], 0.95),
   r('gr-genesis', 'génesis', 'genes', 'greek', 'coming into being', ['creation', 'origin', 'life'], 0.9),
   r('gr-heuresis', 'heúresis', 'heur', 'greek', 'a finding out, discovery', ['discovery'], 0.9),
-  r('gr-phaos', 'pháos', 'phae', 'greek', 'light, daylight', ['light', 'clarity'], 0.9),
+  r('gr-phaos', 'pháos', 'pha', 'greek', 'light, daylight', ['light', 'clarity'], 0.9),
   r('gr-aither', 'aithḗr', 'aith', 'greek', 'the bright upper air', ['light', 'sky'], 0.75),
   r('gr-morphe', 'morphḗ', 'morph', 'greek', 'form, shape', ['transformation', 'creation'], 0.8),
   r('gr-mneme', 'mnḗmē', 'mnem', 'greek', 'memory, remembrance', ['memory'], 0.95),
-  r('gr-noos', 'nóos', 'noe', 'greek', 'mind, perception', ['mind', 'consciousness', 'thought'], 0.9),
+  r('gr-noos', 'nóos', 'noo', 'greek', 'mind, perception', ['mind', 'consciousness', 'thought'], 0.9),
   r('gr-chronos', 'khrónos', 'khron', 'greek', 'time, duration', ['time'], 0.95),
   r('gr-aion', 'aiṓn', 'aion', 'greek', 'age, lifetime, eternity', ['time', 'eternity'], 0.85),
   r('gr-kosmos', 'kósmos', 'kosm', 'greek', 'order; the ordered world', ['order', 'law'], 0.9),
@@ -133,13 +152,13 @@ export const LEXICON: Root[] = [
   r('eg-maat', 'mꜣꜥt (maat)', 'maat', 'egyptian', 'truth, order, right measure', ['truth', 'order', 'law'], 1),
   r('eg-ren', 'rn (ren)', 'ren', 'egyptian', 'name — one of the parts of a person', ['name'], 0.95),
   r('eg-sia', 'sjꜣ (sia)', 'sia', 'egyptian', 'perception, understanding', ['knowledge', 'consciousness'], 0.9),
-  r('eg-heka', 'ḥkꜣ (heka)', 'heka', 'egyptian', 'the power in spoken words', ['word', 'speech', 'sacred'], 0.85),
+  r('eg-heka', 'ḥkꜣ (heka)', 'heka', 'egyptian', 'magic, magical power', ['sacred', 'hidden'], 0.85),
   r('eg-akh', 'ꜣḫ (akh)', 'akh', 'egyptian', 'radiant, effective; the shining one', ['light', 'transformation'], 0.8),
   r('eg-kheper', 'ḫpr (kheper)', 'kheper', 'egyptian', 'to come into being, to become', ['transformation', 'creation'], 0.9),
   r('eg-neheh', 'nḥḥ (neheh)', 'neheh', 'egyptian', 'time that returns; cyclical eternity', ['time', 'eternity'], 0.85),
   r('eg-djet', 'ḏt (djet)', 'djet', 'egyptian', 'time that endures; unchanging eternity', ['eternity', 'time'], 0.8),
   r('eg-sesh', 'sš (sesh)', 'sesh', 'egyptian', 'writing, the scribe', ['word', 'memory', 'learning'], 0.85),
-  r('eg-nun', 'nwn (nun)', 'nun', 'egyptian', 'the first waters, before anything', ['origin', 'water', 'depth'], 0.85),
+  r('eg-nun', 'nnw (nun)', 'nun', 'egyptian', 'the first waters, before anything', ['origin', 'water', 'depth'], 0.85),
   r('eg-benben', 'bnbn (benben)', 'ben', 'egyptian', 'the first mound to rise', ['origin', 'foundation'], 0.75),
   r('eg-wehem', 'wḥm (wehem)', 'wehem', 'egyptian', 'to repeat, to tell again', ['memory', 'speech'], 0.7),
 
@@ -153,7 +172,7 @@ export const LEXICON: Root[] = [
   r('su-abzu', 'abzu', 'abzu', 'sumerian', 'the deep fresh water under the earth', ['depth', 'water', 'hidden'], 0.85),
   r('su-an', 'an', 'an', 'sumerian', 'sky, heaven', ['sky'], 0.8),
   r('su-ud', 'ud', 'ud', 'sumerian', 'day, light, time', ['light', 'time'], 0.75),
-  r('su-eresh', 'ereš', 'eresh', 'sumerian', 'wise, a wise woman', ['wisdom'], 0.8),
+  r('su-eresh', 'ereš', 'eresh', 'sumerian', 'wise', ['wisdom'], 0.7),
   r('su-dim', 'dím', 'dim', 'sumerian', 'to make, to fashion', ['creation'], 0.85),
 
   // ── Akkadian ──────────────────────────────────────────────────────────────
@@ -165,7 +184,7 @@ export const LEXICON: Root[] = [
   r('ak-pirishtu', 'pirištu', 'pirish', 'akkadian', 'a secret, a thing withheld', ['hidden'], 0.95),
   r('ak-shimtu', 'šīmtu', 'shim', 'akkadian', 'destiny, what is fixed', ['law', 'time'], 0.8),
   r('ak-uznu', 'uznu', 'uzn', 'akkadian', 'ear; and so, discernment', ['wisdom', 'mind'], 0.75),
-  r('ak-reshtu', 'rēštu', 'resh', 'akkadian', 'first, foremost', ['origin', 'beginning'], 0.85),
+  r('ak-reshtu', 'rēštu', 'resh', 'akkadian', 'beginning, the first of a thing', ['origin', 'beginning'], 0.85),
   r('ak-banu', 'banû', 'ban', 'akkadian', 'to build, to bring into being', ['creation'], 0.8),
   r('ak-temu', 'ṭēmu', 'tem', 'akkadian', 'reason, understanding, report', ['mind', 'word'], 0.8),
 
@@ -179,7 +198,7 @@ export const LEXICON: Root[] = [
   r('av-spenta', 'spəṇta', 'spen', 'avestan', 'holy, furthering', ['sacred'], 0.75),
   r('av-vohu', 'vohu', 'vohu', 'avestan', 'good', ['harmony'], 0.65),
   r('op-arta', 'arta', 'art', 'oldpersian', 'truth, right order', ['truth', 'order'], 0.95),
-  r('op-baga', 'baga', 'bag', 'oldpersian', 'lord, the one who apportions', ['sacred'], 0.7),
+  r('op-baga', 'baga', 'bag', 'oldpersian', 'god', ['sacred'], 0.7),
   r('op-vazraka', 'vazraka', 'vazr', 'oldpersian', 'great', ['strength'], 0.65),
 
   // ── Hebrew & Aramaic ──────────────────────────────────────────────────────
@@ -208,7 +227,6 @@ export const LEXICON: Root[] = [
   // Attested almost entirely in inscriptions, so the pool here is small on purpose.
   r('ph-shem', 'šm (shem)', 'shem', 'phoenician', 'name', ['name'], 0.85),
   r('ph-dabar', 'dbr (dabar)', 'dabar', 'phoenician', 'word, to speak', ['word', 'speech'], 0.8),
-  r('ph-kun', 'kn (kun)', 'kun', 'phoenician', 'to be firm, to be established', ['foundation', 'truth'], 0.8),
   r('ph-olam', 'ʿlm (olam)', 'olam', 'phoenician', 'lasting time, the far past or future', ['eternity', 'time'], 0.85),
   r('ph-ur', 'ʾr (ur)', 'ur', 'phoenician', 'light, flame', ['light', 'fire'], 0.8),
   r('ph-yada', 'ydʿ (yada)', 'yada', 'phoenician', 'to know', ['knowledge'], 0.8),
@@ -237,7 +255,7 @@ export const LEXICON: Root[] = [
   r('zh-wen', '文 wén', 'wen', 'chinese', 'writing, pattern, culture', ['word', 'learning'], 0.8),
 
   // ── Ge'ez ─────────────────────────────────────────────────────────────────
-  r('gz-sedq', 'ṣədq', 'sedeq', 'geez', 'righteousness, what is true', ['truth', 'law'], 0.9),
+  r('gz-sedq', 'ṣədq', 'sedq', 'geez', 'righteousness, what is true', ['truth', 'law'], 0.9),
   r('gz-tebab', 'ṭəbäb', 'tebab', 'geez', 'wisdom', ['wisdom'], 0.9),
   r('gz-berhan', 'bərhan', 'berhan', 'geez', 'light', ['light'], 0.95),
   r('gz-qal', 'qal', 'qal', 'geez', 'voice, word', ['word', 'voice'], 0.85),
@@ -256,25 +274,22 @@ export const LEXICON: Root[] = [
   r('pie-nomn', '*h₁nómn̥', 'nomen', 'pie', 'name', ['name'], 0.9),
   r('pie-ar', '*h₂er-', 'ar', 'pie', 'to fit together', ['order', 'harmony'], 0.85),
   r('pie-teks', '*teḱs-', 'teks', 'pie', 'to fashion, to weave', ['creation', 'order'], 0.85),
-  r('pie-ayu', '*h₂éyu-', 'ayu', 'pie', 'vital force, long life', ['life', 'eternity'], 0.8),
+  r('pie-ayu', '*h₂óyu', 'ayu', 'pie', 'lifetime, long life', ['life', 'eternity'], 0.8),
   r('pie-dheh', '*dʰeh₁-', 'dhe', 'pie', 'to set in place, to make', ['creation', 'foundation'], 0.8),
   r('pie-klew', '*ḱlew-', 'klew', 'pie', 'to hear; and so, fame', ['voice', 'memory'], 0.8),
   r('pie-derk', '*derḱ-', 'derk', 'pie', 'to see clearly', ['sight', 'clarity'], 0.8),
   r('pie-reg', '*h₃reǵ-', 'reg', 'pie', 'to straighten, to rule', ['order', 'law'], 0.85),
-  r('pie-wer', '*weh₁r-', 'wer', 'pie', 'true, trustworthy', ['truth'], 0.85),
-  r('pie-sew', '*sewH-', 'sev', 'pie', 'to give birth, to bring forth', ['creation', 'origin'], 0.75),
+  r('pie-wer', '*weh₁ros', 'wer', 'pie', 'true', ['truth'], 0.85),
+  r('pie-sew', '*sewH-', 'sew', 'pie', 'to give birth, to bring forth', ['creation', 'origin'], 0.75),
 
   // ── Proto-Semitic (reconstructed) ─────────────────────────────────────────
-  r('ps-amn', '*ʾ-m-n', 'amin', 'psem', 'to be firm, to be trusted', ['truth', 'foundation'], 0.9),
-  r('ps-hkm', '*ḥ-k-m', 'hakim', 'psem', 'to be wise', ['wisdom'], 0.9),
-  r('ps-ydʿ', '*y-d-ʿ', 'yad', 'psem', 'to know', ['knowledge'], 0.85),
-  r('ps-nwr', '*n-w-r', 'nawr', 'psem', 'light, fire', ['light', 'fire'], 0.9),
-  r('ps-dbr', '*d-b-r', 'debar', 'psem', 'to speak, a word', ['word', 'speech'], 0.85),
-  r('ps-ktb', '*k-t-b', 'katab', 'psem', 'to write', ['word', 'memory'], 0.8),
-  r('ps-ʿlm', '*ʿ-l-m', 'alam', 'psem', 'hidden; and so, distant time', ['hidden', 'eternity'], 0.9),
-  r('ps-zkr', '*ḏ-k-r', 'zakar', 'psem', 'to remember, to name', ['memory', 'name'], 0.85),
-  r('ps-brʾ', '*b-r-ʾ', 'bar', 'psem', 'to create, to shape', ['creation'], 0.8),
-  r('ps-ṣdq', '*ṣ-d-q', 'sadeq', 'psem', 'to be right, to be just', ['truth', 'law'], 0.85),
+  // Two entries. There were ten, typed as bare consonantal roots (*ḥ-k-m) with vowels
+  // borrowed from a daughter language to make them sayable — "hakim" is Arabic, "zakar"
+  // Hebrew — and an audit against the dictionaries found three whose Proto-Semitic
+  // meaning was not the one given and five with no reconstruction to cite at all. What
+  // is left is cited in the shape it is actually reconstructed in.
+  r('ps-ydʿ', '*wadaʕ-', 'wada', 'psem', 'to know', ['knowledge'], 0.85),
+  r('ps-nwr', '*nūr-', 'nur', 'psem', 'light', ['light', 'fire'], 0.9),
 
   /**
    * ── Euphonic endings ─────────────────────────────────────────────────────

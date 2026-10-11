@@ -1,13 +1,13 @@
 // Written by scripts/build_roots.py — the tally of the generated root database.
 export const STATS = {
-  "roots": 58392,
-  "meanings": 10422,
-  "words": 19694,
+  "roots": 58388,
+  "meanings": 10418,
+  "words": 19931,
   "shards": 512,
   "attested": 211080,
   "verified": 42538,
-  "unconfirmed": 9956,
-  "flagged": 5898,
+  "unconfirmed": 9812,
+  "flagged": 6038,
   "languages": {
     "adunaic": 109,
     "akkadian": 650,
@@ -16,11 +16,11 @@ export const STATS = {
     "egyptian": 1856,
     "geez": 444,
     "gothic": 2000,
-    "greek": 7240,
+    "greek": 7239,
     "hebrew": 3724,
     "hittite": 150,
     "khuzdul": 29,
-    "latin": 10119,
+    "latin": 10117,
     "oldenglish": 6456,
     "oldirish": 2264,
     "oldnorse": 2840,
@@ -31,7 +31,7 @@ export const STATS = {
     "pgmc": 3713,
     "pie": 1251,
     "quenya": 1232,
-    "sanskrit": 5725,
+    "sanskrit": 5724,
     "sindarin": 773,
     "sumerian": 859,
     "telerin": 110,
@@ -43,42 +43,42 @@ export const STATS = {
       "flagged": 19
     },
     "akkadian": {
-      "unconfirmed": 130,
-      "flagged": 108,
+      "unconfirmed": 132,
+      "flagged": 106,
       "verified": 412
     },
     "aramaic": {
       "verified": 1032,
-      "unconfirmed": 1319,
-      "flagged": 123
+      "unconfirmed": 1271,
+      "flagged": 171
     },
     "blackspeech": {
       "verified": 13,
       "flagged": 1
     },
     "egyptian": {
-      "flagged": 234,
+      "flagged": 225,
       "verified": 1268,
-      "unconfirmed": 354
+      "unconfirmed": 363
     },
     "geez": {
       "unconfirmed": 430,
       "flagged": 14
     },
     "gothic": {
-      "unconfirmed": 639,
+      "unconfirmed": 647,
       "verified": 1162,
-      "flagged": 199
+      "flagged": 191
     },
     "greek": {
       "verified": 5752,
-      "unconfirmed": 494,
-      "flagged": 994
+      "unconfirmed": 501,
+      "flagged": 986
     },
     "hebrew": {
-      "flagged": 865,
+      "flagged": 1024,
       "verified": 2558,
-      "unconfirmed": 301
+      "unconfirmed": 142
     },
     "hittite": {
       "unconfirmed": 143,
@@ -90,13 +90,13 @@ export const STATS = {
     },
     "latin": {
       "verified": 8295,
-      "flagged": 986,
-      "unconfirmed": 838
+      "flagged": 971,
+      "unconfirmed": 851
     },
     "oldenglish": {
       "verified": 4902,
-      "unconfirmed": 1043,
-      "flagged": 511
+      "unconfirmed": 1055,
+      "flagged": 499
     },
     "oldirish": {
       "unconfirmed": 2207,
@@ -104,16 +104,16 @@ export const STATS = {
     },
     "oldnorse": {
       "verified": 2342,
-      "unconfirmed": 282,
-      "flagged": 216
+      "unconfirmed": 283,
+      "flagged": 215
     },
     "oldpersian": {
       "unconfirmed": 81
     },
     "pali": {
       "verified": 1682,
-      "unconfirmed": 153,
-      "flagged": 124
+      "unconfirmed": 158,
+      "flagged": 119
     },
     "pcelt": {
       "verified": 1038,
@@ -140,8 +140,8 @@ export const STATS = {
     },
     "sanskrit": {
       "verified": 4326,
-      "unconfirmed": 724,
-      "flagged": 675
+      "unconfirmed": 727,
+      "flagged": 671
     },
     "sindarin": {
       "verified": 647,
@@ -149,8 +149,8 @@ export const STATS = {
     },
     "sumerian": {
       "verified": 717,
-      "unconfirmed": 82,
-      "flagged": 60
+      "unconfirmed": 85,
+      "flagged": 57
     },
     "telerin": {
       "verified": 100,

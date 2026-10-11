@@ -60,9 +60,9 @@ thesaurus at a lower weight, so the thing actually asked for still leads.
 
 Two things about the house concepts (the `CONCEPTS` list) are worth knowing before adding
 to the vocabulary. They read like ordinary English and are not: `order` is cosmic law —
-ṛta, ma'at, dharma, dào — and `foundation` is entangled with truth, because five of the
-hand-written roots carrying it (ʾemet, kittu, *ʾ-m-n, kun) are truth roots in traditions
-where what is firm and what is true are one word.
+ṛta, ma'at, dharma, dào — and `foundation` is entangled with truth, because two of the
+hand-written roots carrying it (ʾemet, kittu) are truth roots in traditions where what is
+firm and what is true are one word.
 
 **2. Form the name** — `src/lib/formation.ts` *(the default)*
 Two roots from **one** language, joined by that language's own rule; or one root with one

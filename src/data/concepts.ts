@@ -149,11 +149,11 @@ const WORDS: Record<string, string[]> = {
    * answers a question about making with the moral order of the universe, and
    * puts "Truth, given its measure" at the top of the page again.
    *
-   * `foundation` is the same trap one step further in. Five of the nine roots
-   * carrying it — ʾemet, kittu, *ʾ-m-n, kun — are truth roots, because in those
-   * traditions what is firm and what is true are the same word. So the words
-   * for the made thing itself stay off it, and the ones that really do mean a
-   * thing built on (framework, construct) keep it.
+   * `foundation` is the same trap one step further in. Two of the hand-written roots
+   * carrying it — ʾemet and kittu — are truth roots, because in those traditions what
+   * is firm and what is true are the same word. So the words for the made thing itself
+   * stay off it, and the ones that really do mean a thing built on (framework,
+   * construct) keep it.
    */
   prototype: ['origin', 'creation'],
   archetype: ['origin', 'creation'],
@@ -350,6 +350,21 @@ export interface Interpretation {
   unmatched: string[]
   /** The roots in the database that answer `weights`. The lexicon is searched separately. */
   roots: Root[]
+  /**
+   * Verbs that were typed, and the nouns they were read as. A name is built on nouns and
+   * adjectives, so "generate" can only come through as creation or maker — and the page
+   * has to say that happened, or a two-word search that returns names about one word
+   * looks like the other was ignored.
+   */
+  recast: { word: string; as: string[] }[]
+  /** Meanings that cannot take a kinship or diminutive ending. See Shard.x. */
+  kinless: Set<string>
+  /**
+   * Which typed word each meaning came from, and how directly: 0 for the word itself or
+   * what stands in for it, higher for its wider kin. A name that joins two meanings of
+   * the same typed word has answered half the search twice.
+   */
+  origin: Map<string, { word: number; tier: number }>
 }
 
 /**
@@ -391,10 +406,14 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
   // near "fleet" the adjective, not "fleet" the navy. A meaning the user typed is theirs
   // in every sense, and is never restricted.
   const only = new Map<string, string>()
+  const origin: Interpretation['origin'] = new Map()
+  // Which typed word, and how far from it, the meanings being bumped right now belong to.
+  let from = { word: -1, tier: 0 }
   const bump = (meaning: string, amount: number, pos?: string) => {
     const before = weights.get(meaning) ?? 0
     if (amount > before) {
       weights.set(meaning, amount)
+      origin.set(meaning, from)
       if (pos) only.set(meaning, pos)
       else only.delete(meaning)
     } else if (amount === before && !pos) {
@@ -408,12 +427,17 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
   text = text.replace(/\s+/g, ' ')
 
   // Phrases first, and consumed as they match so their words cannot be counted twice.
-  for (const [phrase, meanings] of PHRASES) {
+  PHRASES.forEach(([phrase, meanings], index) => {
     if (text.includes(` ${phrase} `)) {
-      meanings.forEach((m) => bump(m, WEIGHT.direct))
+      // A phrase is several ideas on purpose — "coffee shop" is drink and hearth — so
+      // each of its meanings counts as a typed word of its own.
+      meanings.forEach((m, i) => {
+        from = { word: -1000 - index * 10 - i, tier: 0 }
+        bump(m, WEIGHT.direct)
+      })
       text = text.replace(` ${phrase} `, ' ')
     }
-  }
+  })
 
   const typed = [...new Set(text.split(' ').filter((word) => word && !FILLER.has(word)))]
   const options = typed.map(spellings)
@@ -423,51 +447,92 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
   const read: { word: string; entry: Entry; own: boolean }[] = []
   const unmatched: string[] = []
   typed.forEach((raw, i) => {
-    for (const word of options[i]) {
+    // A spelling with roots of its own beats one the thesaurus merely knows: "hands" is
+    // in the thesaurus as custody, and what was typed is the plural of "hand".
+    const placed = options[i].find((word) => known.get(word)!.roots.length > 0 || isConcept(word) || WORDS[word])
+    const word = placed ?? options[i].find((option) => known.get(option)!.near.some((tier) => tier.length > 0))
+    if (word) {
       const entry = known.get(word)!
-      const own = entry.roots.length > 0 || isConcept(word)
-      if (!own && !WORDS[word] && !entry.near.some((tier) => tier.length > 0)) continue
-      read.push({ word, entry, own })
-      return
+      read.push({ word, entry, own: entry.roots.length > 0 || isConcept(word) })
+    } else if (raw.length > 2) {
+      unmatched.push(raw)
     }
-    if (raw.length > 2) unmatched.push(raw)
   })
 
-  for (const { word, own } of read) {
+  read.forEach(({ word, entry, own }, index) => {
+    from = { word: index, tier: 0 }
     if (own) bump(word, WEIGHT.direct)
-    WORDS[word]?.forEach((m) => bump(m, own && m !== word ? WEIGHT.aside : WEIGHT.curated))
-  }
+    // "Generation" is filed mostly as an age of people, and was typed as the act of
+    // generating. The nouns of its verb stand beside it as the same idea.
+    entry.acts.forEach((tagged) => {
+      const [meaning, pos] = tagged.split(':')
+      bump(meaning, WEIGHT.curated, pos)
+    })
+    // The vocabulary's ideas for one word are different ideas — software is craft and
+    // tool — and a name may join them, so each is its own origin.
+    WORDS[word]?.forEach((m, i) => {
+      from = { word: own ? index : index + (i + 1) * 0.01, tier: own && m !== word ? 1 : 0 }
+      bump(m, own && m !== word ? WEIGHT.aside : WEIGHT.curated)
+    })
+  })
 
   // Now the kin. A word with no root of its own is nothing but its kin, so they count
   // nearly in full; a word that has roots only needs them when the query is too thin to
   // find two unlike roots in — one word, or two that mean much the same.
   const thin = weights.size < ENOUGH
-  for (const { word, entry, own } of read) {
+  const recast: Interpretation['recast'] = []
+  read.forEach(({ word, entry, own }, index) => {
     const placed = own || Boolean(WORDS[word])
     // "Strong" has roots, but they are all adjectives, and a name needs a noun to stand
     // on. Its kin — strength — are what it would have been asked for as a thing.
     const nounless = entry.roots.length > 0 && !entry.roots.some((root) => root.pos === 'n')
-    if (placed && !thin && !nounless) continue
+    // A verb, or near enough: "heal" has one noun among a dozen verbs, and a name built
+    // only on that noun would leave the idea all but unanswered.
+    const nouns = entry.roots.filter((root) =>
+      root.pos !== 'v' && !root.gloss.startsWith('to ') && root.status !== 'flagged')
+    if (entry.roots.length > 0 && nouns.length * 4 <= entry.roots.length && !WORDS[word]) {
+      // A verb. Its nouns stand in for it, and the nearest of them count as asked for:
+      // they are the only way the word that was typed can be in a name at all.
+      const stand = [WEIGHT.curated, 0.8, 0.6]
+      let level = 0
+      const as: string[] = []
+      for (const tier of entry.near) {
+        const nouns = tier.map((tagged) => tagged.split(':')).filter(([, pos]) => pos !== 'v')
+        if (nouns.length === 0) continue
+        const amount = stand[level]
+        from = { word: index, tier: level }
+        nouns.forEach(([meaning, pos]) => bump(meaning, amount, pos))
+        if (level === 0) as.push(...nouns.map(([meaning]) => meaning).slice(0, 3))
+        level += 1
+      }
+      recast.push({ word, as })
+      return
+    }
+    if (placed && !thin && !nounless) return
     const scale = placed && !nounless ? WEIGHT.widen : WEIGHT.near
     entry.near.forEach((tier, depth) => {
       const amount = scale[depth]
       if (!amount) return
+      from = { word: index, tier: depth + 1 }
       tier.forEach((tagged) => {
         const [meaning, pos] = tagged.split(':')
         bump(meaning, amount, pos)
       })
     })
-  }
+  })
   if (thin) {
     for (const meaning of [...weights.keys()]) {
       if (weights.get(meaning)! < WEIGHT.curated) continue
+      from = { word: origin.get(meaning)?.word ?? -1, tier: 3 }
       for (const near of NEIGHBOURS[meaning as Concept] ?? []) bump(near, WEIGHT.neighbor)
     }
   }
 
   const fetched = await db.lookup(weights.keys())
   const roots = new Map<string, Root>()
+  const kinless = new Set<string>()
   for (const [meaning, entry] of fetched) {
+    if (entry.kinless) kinless.add(meaning)
     const pos = only.get(meaning)
     for (const root of entry.roots) {
       if (pos && root.pos !== pos) continue
@@ -482,7 +547,7 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
     .sort((a, b) => b[1] - a[1])
     .map(([meaning]) => meaning)
 
-  return { concepts, weights, unmatched, roots: [...roots.values()] }
+  return { concepts, weights, unmatched, roots: [...roots.values()], recast, kinless, origin }
 }
 
 /** Every meaning the hand-written vocabulary can send a word to. For scripts/battery.ts. */

@@ -2,12 +2,12 @@ import type {
   GeneratedName, GenerationRequest, GenerationResult, NameService, Refinements, Root,
 } from '../types'
 import { Attested, type AttestedLoader } from '../data/attested'
-import { interpret } from '../data/concepts'
+import { interpret, type Interpretation } from '../data/concepts'
 import { LANGUAGES } from '../data/languages'
 import { LEXICON } from '../data/lexicon'
 import { RootDatabase, type ShardLoader } from '../data/roots'
 import { blendRoots, spellingVariants, type Blend } from '../lib/blend'
-import { FORMING, compounds, derivations, usable, type Formed } from '../lib/formation'
+import { FORMING, compounds, derivations, sound, usable, type Formed } from '../lib/formation'
 import { diversify, judge, judgeFormed, meaningStrength } from '../lib/score'
 import { pronounce, syllableCount, titleCase } from '../lib/phonology'
 import { fullMeaning, shortInterpretation } from '../lib/meaning'
@@ -48,7 +48,8 @@ export class LocalNameService implements NameService {
 
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const { query, refinements, exclude = [] } = request
-    const { concepts, weights, unmatched, roots } = await interpret(query, this.db)
+    const read = await interpret(query, this.db)
+    const { concepts, weights, unmatched, roots, recast } = read
 
     // Nothing was read. There is no honest set of names for that: the old fallback built
     // them from Archis's own favorite ideas, and every unread query came back about truth.
@@ -75,11 +76,11 @@ export class LocalNameService implements NameService {
 
     let fresh = await unattested(refinements.mix
       ? blended(roots, weights, refinements, excluded)
-      : formed(roots, weights, refinements, excluded, FIRM))
+      : formed(read, refinements, excluded, FIRM))
     // A search no language can answer firmly — one rare word, say — is tried again with
     // the word's kin let in. Only then: the kin are what was not asked for.
     if (!refinements.mix && fresh.length < 3) {
-      fresh = await unattested(formed(roots, weights, refinements, excluded, LOOSE))
+      fresh = await unattested(formed(read, refinements, excluded, LOOSE))
     }
 
     const chosen = refinements.mix ? diversify(fresh, refinements.count) : spread(fresh, refinements.count)
@@ -106,6 +107,11 @@ export class LocalNameService implements NameService {
         unmatched.length > 0
           ? `Read as ${concepts.slice(0, 4).join(', ')}. Archis could not read ${quote(unmatched)}.`
           : null,
+        // A verb cannot sit in a name as it is. Say what it was taken as, or that it
+        // could not be taken as anything.
+        ...recast.map(({ word, as }) => as.length > 0
+          ? `"${word}" is a verb, and a name is built on nouns and adjectives, so it was read as ${as.join(', ')}.`
+          : `"${word}" is a verb with no noun of its own here, so it was left out — a noun for the same idea will work.`),
         names.length < refinements.count
           ? `${names.length} ${names.length === 1 ? 'name' : 'names'} cleared the bar for this search — a weak name is left out rather than shown.`
           : null,
@@ -127,6 +133,8 @@ interface Scored {
   tailId: string
   score: number
   language?: string
+  /** What the name says, so a page is not nine names that all say the same thing. */
+  reading?: string
   build: () => GeneratedName
 }
 
@@ -157,14 +165,12 @@ const PER_MEANING = 2
 const PER_LANGUAGE_FORMED = 8
 
 function formed(
-  roots: Root[],
-  weights: Map<string, number>,
+  read: Interpretation,
   refinements: Refinements,
   excluded: Set<string>,
   firm: number,
 ): Scored[] {
-  const asked = [...weights.values()].filter((w) => w >= ASKED).length
-
+  const { roots, weights, kinless, origin } = read
   const byLanguage = new Map<string, { root: Root; strength: number; answer: string }[]>()
   for (const root of roots) {
     if (!FORMING.has(root.language) || !usable(root)) continue
@@ -174,6 +180,19 @@ function formed(
     list.push({ root, strength, answer: answers(root, weights) })
     byLanguage.set(root.language, list)
   }
+
+  // How many of the ideas asked for a name could actually be built on. A typed verb has
+  // no usable root, and a name on the one remaining idea is then the whole answer, not
+  // half of one.
+  const asked = new Set(
+    [...byLanguage.values()].flat().map((entry) => entry.answer).filter((a) => (weights.get(a) ?? 0) >= ASKED),
+  ).size
+
+  // How many typed words have anything to build on. With two, a name has to join one
+  // idea from each; with one, it may join the word to its own wider kin.
+  const typed = new Set(
+    [...byLanguage.values()].flat().map((entry) => origin.get(entry.answer)?.word).filter((w) => w !== undefined),
+  ).size
 
   const out: Scored[] = []
   const seen = new Set<string>()
@@ -200,6 +219,7 @@ function formed(
       tailId: made.roots[1]?.root.id ?? made.roots[0].root.id,
       score,
       language: made.language,
+      reading: made.reading,
       build: () => fromFormed(made, score),
     })
   }
@@ -223,6 +243,10 @@ function formed(
         // Two roots that say the same thing make a name that says it twice.
         if (a.answer === b.answer) continue
         if (a.root.concepts.some((c) => b.root.concepts.includes(c))) continue
+        // "Maker" and "creation" both came from the word "generate". Joined, they answer
+        // that one word twice and the rest of the search not at all.
+        const from = [origin.get(a.answer), origin.get(b.answer)]
+        if (from[0] && from[1] && from[0].word === from[1].word && (typed > 1 || from[0].tier === from[1].tier)) continue
         const direct = (weights.get(a.answer) ?? 0) >= ASKED && (weights.get(b.answer) ?? 0) >= ASKED
         const meanings = new Map([[a.root, a.answer], [b.root, b.answer]])
         for (const made of compounds(a.root, b.root, meanings)) offer(made, [a.strength, b.strength], direct)
@@ -230,7 +254,7 @@ function formed(
     }
     for (const pick of picks) {
       if (firm === FIRM && (weights.get(pick.answer) ?? 0) < ASKED) continue
-      for (const made of derivations(pick.root, pick.answer)) offer(made, [pick.strength], true)
+      for (const made of derivations(pick.root, pick.answer, !kinless.has(pick.answer))) offer(made, [pick.strength], true)
     }
   }
 
@@ -242,24 +266,31 @@ function formed(
  *
  * Left to the score alone the page fills with whichever language has the shortest words
  * for these ideas. The first pass takes two names from any language and uses a root once;
- * the second relaxes both, so a search only two languages can answer still fills.
- * The invented languages come last, together, so they are never mistaken for the old ones.
+ * the second relaxes both and the third drops them, so a search only two languages can
+ * answer still fills. The invented languages come last, together, so they are never
+ * mistaken for the old ones.
  */
 function spread(ranked: Scored[], count: number): Scored[] {
   const chosen: Scored[] = []
   const perLanguage = new Map<string, number>()
   const rootUse = new Map<string, number>()
+  const perReading = new Map<string, number>()
 
-  for (const [languageCap, rootCap] of [[2, 1], [3, 2]] as const) {
+  // The caps are for variety, not for exclusion: every name here has already cleared the
+  // bar, so the last pass has none and the grid fills whenever there is enough to fill it.
+  for (const [languageCap, rootCap, readingCap] of [[2, 1, 2], [3, 2, 3], [Infinity, Infinity, Infinity]] as const) {
     for (const candidate of ranked) {
       if (chosen.length >= count) break
       if (chosen.includes(candidate)) continue
       const language = candidate.language ?? ''
+      const reading = candidate.reading ?? candidate.name
       if ((perLanguage.get(language) ?? 0) >= languageCap) continue
+      if ((perReading.get(reading) ?? 0) >= readingCap) continue
       if ((rootUse.get(candidate.headId) ?? 0) >= rootCap) continue
       if (candidate.tailId !== candidate.headId && (rootUse.get(candidate.tailId) ?? 0) >= rootCap) continue
       chosen.push(candidate)
       perLanguage.set(language, (perLanguage.get(language) ?? 0) + 1)
+      perReading.set(reading, (perReading.get(reading) ?? 0) + 1)
       rootUse.set(candidate.headId, (rootUse.get(candidate.headId) ?? 0) + 1)
       if (candidate.tailId !== candidate.headId) rootUse.set(candidate.tailId, (rootUse.get(candidate.tailId) ?? 0) + 1)
     }
@@ -303,7 +334,7 @@ function blended(
   // only where the database has nothing with that stem. Flagged roots and verbs stay out.
   const have = new Set(roots.map((root) => `${root.language}:${root.stem}`))
   const candidates = [
-    ...roots.filter((root) => root.status !== 'flagged' && root.pos !== 'v' && !root.gloss.startsWith('to ')),
+    ...roots.filter((root) => sound(root) && root.pos !== 'v' && !root.gloss.startsWith('to ')),
     ...LEXICON.filter((root) => root.language !== 'euphonic' && !have.has(`${root.language}:${root.stem}`)),
   ]
   const pool = gatherRoots(candidates, weights)

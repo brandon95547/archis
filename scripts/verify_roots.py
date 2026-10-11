@@ -147,7 +147,9 @@ the next two if WordNet's tagged corpus has the word in that sense at all.
 
 A conflict is withheld — the root is left unconfirmed — when the other dictionary's entry
 cannot be compared: it has no English gloss ("id.", "= foreg.", a German-only TLA lemma),
-or every entry with that spelling is another part of speech (our noun, their verb).
+every entry with that spelling is another part of speech (our noun, their verb), or the
+dictionary covers one corpus only (Strong's Greek and SEDRA the New Testament, the
+Hebrew Wiktionary mostly the modern language).
 
 Known weaknesses:
   · English homonyms. Our "bear" the animal agrees with their "to bear"; the lemma is the
@@ -162,6 +164,9 @@ Known weaknesses:
     entry glossed only in Latin cannot agree.
   · Different citation conventions (assimilated prefixes in Latin, doubled consonants in
     Old English, ga- compounds in Gothic) are not bridged: unconfirmed.
+  · The second sources have holes of their own. The Perseus file of LSJ lacks some
+    ordinary entries (ἐκδοχή, ἀπόκρισις, βοηθός); Wright's glossary is 2,400 words; the
+    ORACC glossary is the vocabulary of one archive. "Headword not in …" is weak evidence.
   · Wiktionary's editors used several of these same dictionaries. "Independent" here
     means a different publication, not an uncorrelated one.
 """
@@ -222,6 +227,22 @@ cl pf aor impv subj pot fut gr ifc ind mfn mf nt cp cpd pp ppr ger caus med add 
 abs constr freq prob perh orig dim dimin pers impers refl rel interj neg poet metaph
 small little large great big good bad full furnish provide pertain belong relate consist
 contain resemble like send bring set keep hold turn call show find say together apart
+'''.split())
+# The part of the stop list that can never be a meaning: grammar, not vocabulary.
+FUNCTION = set('''
+a an the of to in on at by for from with without into onto upon over under and or but not
+no nor as than that this these those it its he she they them his her their one ones any
+some all each every other another such same own very more most less least much many few
+is are was were been being am has had does did done esp especially usually often sometimes
+also only merely properly literally figuratively lit fig generally specifically certain
+various particular etc cf viz ie eg sc opp which who whom whose what where when while
+there here then thus so if up out off away down about above after again against along
+among around before behind below beneath beside between beyond during except near since
+through toward towards until within anyone oneself something someone somebody anything
+m f n adj adv v vb verb noun masc fem neut pl sg sing plur dat acc gen nom abl inf perf
+pres pass trans intr intrans subst prep conj pron num indecl comp sup id ib ibid col wr vl
+cl pf aor impv subj pot fut gr ifc ind mfn mf nt cp cpd pp ppr ger caus med add adds
+abs constr freq prob perh orig dim dimin pers impers refl rel interj neg poet metaph
 '''.split())
 # Words that are meanings in their own right though they are also scaffolding: a gloss
 # alternative made of nothing else ("to make", "man", "great") is still a whole meaning.
@@ -472,6 +493,11 @@ def agree(root_keys: tuple, root_gloss: str, pos: str, text: str):
         if hit:
             return tier, sorted(hit)[0]
     hit = lemmas(root_gloss) & theirs
+    if hit:
+        return 'gloss', sorted(hit)[0]
+    # Last, and only ever enough to hold back a conflict: a scaffolding word in common
+    # ("back" in "back, backbone" and "shoulder; back").
+    hit = (lemmas(root_gloss, True) & theirs_all) - FUNCTION
     if hit:
         return 'gloss', sorted(hit)[0]
     return None
@@ -1257,6 +1283,13 @@ BY_LANGUAGE = {
     'egyptian': ('aed-tla',),
 }
 NO_SOURCE = ('hittite', 'oldpersian', 'geez', 'oldirish')
+# Dictionaries of one corpus or one period. What they say a word means there is not all
+# it means, so they may confirm a root and may not contradict one.
+NARROW = {
+    'strongs-greek': 'glosses New Testament usage only',
+    'wiktionary-he': 'is mostly a dictionary of modern Hebrew',
+    'sedra': 'covers the Syriac New Testament only',
+}
 ROOT_POS = {'noun': 'n', 'verb': 'v', 'adj': 'a'}
 POS_NAME = {'n': 'noun', 'v': 'verb', 'a': 'adjective'}
 
@@ -1373,9 +1406,10 @@ class Verifier:
         if skipped:
             return _result('unconfirmed', None, skipped)
 
-        weak, conflict, found_in = None, None, []
+        # weak: something speaks for the root, or the entry cannot be compared at all.
+        # aside: a disagreement that proves nothing (a homograph, a one-corpus glossary).
+        weak, conflict, aside = None, None, None
         for name, strength, entries in self._candidates(root):
-            found_in.append(name)
             said = [e for e in entries if comparable(e[0])]
             best = None
             for lead, _more, _pos in said:
@@ -1406,8 +1440,10 @@ class Verifier:
             if deep:
                 weak = weak or deep
             elif strength == 'loose':
-                weak = weak or (f'{name} has a word with these consonants and another meaning '
-                                f'(may be a homograph): {shown}')
+                aside = aside or (f'{name} has a word with these consonants and another meaning '
+                                  f'(may be a homograph): {shown}')
+            elif name in NARROW:
+                aside = aside or f'{name} {NARROW[name]} and gives another meaning: {shown}'
             elif len(said) < len(entries):
                 weak = weak or f'{name} has a homograph with no English gloss; the others: {shown}'
             elif not same_pos:
@@ -1419,6 +1455,8 @@ class Verifier:
             return _result('unconfirmed', None, 'weak — ' + weak)
         if conflict:
             return _result('conflict', conflict[0], conflict[1])
+        if aside:
+            return _result('unconfirmed', None, 'weak — ' + aside)
         names = [n for n in self._sources_for(root) if n not in self.missing]
         if not names:
             return _result('unconfirmed', None, f'second source for {lang} not downloaded')

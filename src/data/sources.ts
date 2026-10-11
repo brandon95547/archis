@@ -29,6 +29,7 @@ export const CHECKED_AGAINST: Record<string, string> = {
   'aed-tla': 'the Thesaurus Linguae Aegyptiae',
   descendants: 'the attested words descended from it',
   eldamo: 'Tolkien’s own texts, as cited by Eldamo',
+  audit: 'Wiktionary or a second dictionary, in the audit of the hand-written lexicon',
 }
 
 /** The name to show for a code, or the code itself if the build knows a source this file does not. */

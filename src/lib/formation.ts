@@ -596,7 +596,7 @@ const FORMERS: Record<string, Former> = {
       example: 'agr-i-cola, "field-tiller"', elided: 'magn-animus, "great-souled"',
     }),
     affixes: [
-      suffix('anus', 'belonging to', (x) => `Of the ${x}`, 'Latin makes "belonging to" with -ānus, as in Silv-ānus, "of the forest".'),
+      suffix('alis', 'belonging to', (x) => `Of the ${x}`, 'Latin makes "belonging to" with -ālis, as in rēg-ālis, "of a king".'),
       suffix('inus', 'of, like', (x) => `Of the ${x}`, 'Latin makes "of the nature of" with -īnus, as in mar-īnus, "of the sea".'),
       suffix('ius', 'of the house of', (x) => `Of the ${x}`, 'Latin family names end in -ius, as in Iūl-ius.'),
       kin(suffix('ulus', 'little', (x) => `Little ${x}`, 'Latin makes a diminutive with -ulus, as in rēg-ulus, "little king".',
@@ -779,10 +779,25 @@ const FORMERS: Record<string, Former> = {
 /** The languages a name can be formed in. The rest are in the database and blend only. */
 export const FORMING = new Set(Object.keys(FORMERS))
 
+/**
+ * Languages whose second dictionary is complete enough that a word missing from it is a
+ * warning in itself. A Sanskrit entry Monier-Williams does not have is, as often as not,
+ * a modern coinage — Wiktionary has Sanskrit for "blog" and "nail polish". For these a
+ * root must be verified to be built on. For the rest (Gothic and Akkadian, checked against
+ * a glossary; Ge'ez and Old Persian, against nothing) a root that merely stands on one
+ * source is the best there is, and is allowed.
+ */
+const STRICT = new Set(['greek', 'latin', 'sanskrit', 'pali', 'oldenglish', 'oldnorse', 'hebrew',
+  'sumerian', 'egyptian', 'pie', 'pgmc', 'pcelt'])
+
+/** Checked far enough to put in a name. */
+export const sound = (root: Root) =>
+  root.status === 'verified' || (root.status === 'unconfirmed' && !STRICT.has(root.language))
+
 /** A noun or an adjective that has been checked enough to build on. */
 export const usable = (root: Root) =>
   Boolean(root.word) && (root.pos === 'n' || root.pos === 'a') && !root.gloss.startsWith('to ')
-  && root.status !== 'flagged'
+  && sound(root)
 
 function finish(language: string, kind: Formed['kind'], built: Built, reading: string, roles: Map<Root, string>): Formed {
   const usages: RootUsage[] = []
@@ -861,12 +876,12 @@ export function compounds(a: Root, b: Root, meanings: Map<Root, string> = new Ma
 }
 
 /** Every name one root can make with its language's own name endings and openings. */
-export function derivations(root: Root, meaning?: string): Formed[] {
+export function derivations(root: Root, meaning?: string, kinship = true): Formed[] {
   const former = FORMERS[root.language]
   if (!former?.affixes || !usable(root)) return []
   const out: Formed[] = []
   for (const affix of former.affixes) {
-    if (affix.kinship && !root.kin) continue
+    if (affix.kinship && (!root.kin || !kinship)) continue
     const built = affix.attach(root)
     if (!built) continue
     out.push(finish(root.language, 'derived', built, affix.reading(said(root, meaning)), new Map([[root, 'The whole meaning']])))

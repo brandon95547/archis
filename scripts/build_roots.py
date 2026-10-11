@@ -95,7 +95,7 @@ leper leprosy scab mange lice louse maggot snot spit spittle saliva phlegm belch
 slave enslave torture corpse carcass carrion suicide murder murderer kill killer
 abortion miscarriage childbirth childbed afterbirth placenta ulcer tumor boil abscess
 gangrene dysentery hernia hemorrhoid wart pimple scabies vermin constipation drunken
-drunkard drunkenness
+drunkard drunkenness motherfucker bullshit
 '''.split())
 
 # Things no speaker of these languages had a word for. Wiktionary records the modern
@@ -114,6 +114,7 @@ tractor truck lorry motorcycle jet parachute microscope telescope thermometer pr
 programme download upload database keyboard printer scanner satellite vitamin protein
 calorie volt watt pixel byte sandwich pizza pasta sushi vodka whiskey whisky rum gin
 cocktail soda jeans zipper velcro nylon polyester franc dollar euro yen pound cent penny
+platinum blog
 '''.split())
 
 BAD_SENSE_TAGS = {
@@ -1181,8 +1182,8 @@ def bloom(words: set[str]) -> bytes:
     return bytes(bits)
 
 
-BLOODLESS = {'noun.act', 'noun.communication', 'noun.process', 'noun.relation', 'noun.quantity',
-             'noun.motive', 'noun.shape', 'noun.possession', None}
+BLOODLESS = {'noun.act', 'noun.process', 'noun.relation', 'noun.quantity', 'noun.motive',
+             'noun.shape', 'noun.possession', None}
 
 SHARDS = 512
 
@@ -1283,7 +1284,7 @@ def top_senses(word: str):
         # "simple" means that: any other thing-noun has to be a real share of the word.
         thing = pos == 'n' and (synset.lexname() == 'noun.animal'
                                 or (synset.lexname() in CONCRETE and (top < 5 or count * 10 >= top)))
-        if first and (count * 10 >= top or thing):
+        if first and (count * 4 >= top or thing):
             picked.append(synset)
         elif not first and count * 2 >= max(top, 1):
             picked.append(synset)
@@ -1330,6 +1331,37 @@ def expand(word: str, keys: set[str], cover: dict[str, int]) -> list[list[str]]:
             if plain != word and plain in keys and plain not in GENERIC_KEYS:
                 near[cand] = min(near.get(cand, tier), tier)
 
+    def deverbal(lemma, tier):
+        for derived in lemma.derivationally_related_forms():
+            name = derived.name().lower()
+            # Through another verb, only the act and the doer carry over — creation,
+            # maker. "Yield" and "creature" are things that verb happens to produce.
+            if tier > 0 and not name.endswith(('er', 'or', 'ion', 'ing', 'ment', 'ance', 'ence')):
+                continue
+            # Not "creature" for "create": the animal is a different word by now.
+            if (derived.synset().pos() == 'n' and '_' not in name and name != word and name in keys
+                    and name not in STOP_KEYS and derived.synset() in leading_senses(name)
+                    and derived.synset().lexname() not in ('noun.animal', 'noun.plant', 'noun.body')):
+                cand = tagged(name, derived.synset())
+                near[cand] = min(near.get(cand, tier), tier)
+
+    # A name is built on nouns, so a verb is only as useful as the nouns it leads to: the
+    # act and the doer. "Generate" has none of its own that mean what it means —
+    # "generation" is first of all an age-group — but it is a kind of making, and
+    # creation and maker are exactly what was asked for. Both leading senses of the verb
+    # are read for this, whichever of them is the commoner.
+    verb_senses = [s for s in wn.synsets(word, 'v') if any(l.name().lower() == word for l in s.lemmas())][:2]
+    # Only for a word that really is used as a verb. "Wolf" is one too — to wolf a meal
+    # down — and a search for wolves should not come back with eaters.
+    if wn.synsets(word, 'n') and pos_share(word).get('v', 0) < 0.25:
+        verb_senses = []
+    for synset in verb_senses:
+        for lemma in synset.lemmas():
+            deverbal(lemma, 0 if lemma.name().lower() == word else 1)
+        for hyper in synset.hypernyms():
+            for lemma in hyper.lemmas():
+                deverbal(lemma, 1)
+
     for synset in top_senses(word):
         add(names(synset), 0)
         for lemma in synset.lemmas():
@@ -1369,7 +1401,40 @@ def expand(word: str, keys: set[str], cover: dict[str, int]) -> list[list[str]]:
     for cand, tier in near.items():
         tiers[tier].append(cand)
     limits = (5, 5, 4)
-    return [sorted(tier, key=lambda k: -cover[k.split(':')[0]])[:limit] for tier, limit in zip(tiers, limits)]
+    ranked = [sorted(tier, key=lambda k: -cover[k.split(':')[0]])[:limit] for tier, limit in zip(tiers, limits)]
+    return ranked + [act_kin(word, keys, cover)]
+
+
+def act_kin(word: str, keys: set[str], cover: dict[str, int]) -> list[str]:
+    """
+    For a noun that names an action, the act and the doer of its verb.
+
+    "Book generation" is a request about generating books, and the roots filed under
+    "generation" are mostly about an age of people. The word is also the noun of
+    "generate", which is a kind of making — so creation, making and maker stand beside
+    it as what was probably meant. Only for a noun visibly built on its verb.
+    """
+    if not word.endswith(('ion', 'ing', 'ment', 'ance', 'ence', 'al', 'ure', 'ery')):
+        return []
+    verbs = {d.name().lower() for s in wn.synsets(word, 'n') for l in s.lemmas() if l.name().lower() == word
+             for d in l.derivationally_related_forms()
+             if d.synset().pos() == 'v' and d.name().lower()[:4] == word[:4]}
+    found: dict[str, int] = {}
+    for verb in verbs:
+        for synset in [s for s in wn.synsets(verb, 'v') if any(l.name().lower() == verb for l in s.lemmas())][:2]:
+            lemmas = [(l, True) for l in synset.lemmas() if l.name().lower() == verb]
+            lemmas += [(l, False) for hyper in synset.hypernyms() for l in hyper.lemmas()]
+            for lemma, own in lemmas:
+                for derived in lemma.derivationally_related_forms():
+                    name = derived.name().lower()
+                    if (derived.synset().pos() != 'n' or '_' in name or name == word or name not in keys
+                            or name in STOP_KEYS or derived.synset() not in leading_senses(name)
+                            or derived.synset().lexname() in ('noun.animal', 'noun.plant', 'noun.body')):
+                        continue
+                    if not name.endswith(('er', 'or', 'ion', 'ing', 'ment', 'ance', 'ence')):
+                        continue
+                    found[name] = cover[name]
+    return [f'{name}:n' for name in sorted(found, key=lambda k: -found[k])[:4]]
 
 
 def build_thesaurus(keys: set[str], cover: dict[str, int]) -> dict[str, str]:
@@ -1424,7 +1489,13 @@ def main() -> None:
     # One file would be a megabyte to download before the first name. Instead the database
     # is cut into shards by a hash of the English word, and a search fetches only the few
     # that hold the words it used. `r` is roots by meaning, `t` is the thesaurus.
-    shards = [{'t': {}, 'r': {}} for _ in range(SHARDS)]
+    shards = [{'t': {}, 'r': {}, 'x': []} for _ in range(SHARDS)]
+    # `x`: meanings that take no kinship or diminutive ending. Decided per meaning, not
+    # per root, because one root has several: drómos is "race" and "running", and "son
+    # of the race" is a name where "son of the running" is not.
+    for key in sorted(cover):
+        if leading_lexname(key)['n'] in BLOODLESS:
+            shards[shard_of(key)]['x'].append(key)
     for c in roots:
         # Among roots that mean the same thing, the one with the most descendants and the
         # most sayable stem should be the one a language sends: lýkos before a rare

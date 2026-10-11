@@ -1,5 +1,7 @@
 node_modules
 dist
+# deploy/rebuild.sh builds into dist.new and keeps the last build as dist.old
+dist.*
 .env
 .env.local
 *.local

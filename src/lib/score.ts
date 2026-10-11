@@ -90,9 +90,11 @@ export function judgeFormed(name: string, refinements: Refinements): Judgement {
   if (blocked.blocked) return { score: 0, rejected: blocked.reason }
   if (name.length < 4 || name.length > 13) return { score: 0, rejected: 'too short or too long to be a name' }
 
+  // One more syllable than a blend is allowed. Byblo-genesis is five, and it is a word
+  // Greek could have had; the ranking below still prefers three.
   const syllables = syllableCount(name)
   if (syllables < ABSOLUTE_SYLLABLES[0]) return { score: 0, rejected: 'only one syllable' }
-  if (syllables > ABSOLUTE_SYLLABLES[1]) return { score: 0, rejected: 'more than four syllables' }
+  if (syllables > ABSOLUTE_SYLLABLES[1] + 1) return { score: 0, rejected: 'more than five syllables' }
 
   const harsh = harshness(name)
   if (harsh > 4.5) return { score: 0, rejected: 'consonants crowd too hard' }

@@ -11,7 +11,9 @@ import type { Root } from '../types'
  *
  * A shard holds two things, both keyed by an English word:
  *   · `r` — the roots that mean it, in every language that has one
- *   · `t` — the words near it, for a query word that has no root of its own
+ *   · `t` — the words near it, for a query word that has no root of its own: three tiers
+ *     of kin and, for a noun of action, the nouns of its verb
+ *   · `x` — the meanings here that take no kinship ending
  */
 
 /** Must match SHARDS in scripts/build_roots.py. */
@@ -29,6 +31,8 @@ const STATUS = { v: 'verified', u: 'unconfirmed', f: 'flagged' } as const
 export interface Shard {
   t: Record<string, string>
   r: Record<string, Row[]>
+  /** Meanings that take no kinship or diminutive ending: "son of the running". */
+  x: string[]
 }
 
 export type ShardLoader = (index: number) => Promise<Shard>
@@ -51,6 +55,13 @@ export interface Entry {
    * written "word:pos" — "fleet:a" is fleet the adjective, and only its adjective roots.
    */
   near: [string[], string[], string[]]
+  /**
+   * For a noun that names an action — "generation" — the act and the doer of its verb:
+   * creation, maker. What the word was probably typed to mean, beside what it is filed as.
+   */
+  acts: string[]
+  /** True when the meaning names an act or a process, which cannot have a son. */
+  kinless: boolean
 }
 
 const toRoot = ([language, form, stem, gloss, meanings, pos, weight, word, comb, status, by, kin]: Row): Root => {
@@ -106,6 +117,8 @@ export class RootDatabase {
       out.set(word, {
         roots: (shard.r[word] ?? []).map(toRoot),
         near: [tiers[0] ?? [], tiers[1] ?? [], tiers[2] ?? []],
+        acts: tiers[3] ?? [],
+        kinless: (shard.x ?? []).includes(word),
       })
     })
     return out
