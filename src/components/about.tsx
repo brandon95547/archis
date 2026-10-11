@@ -118,7 +118,7 @@ export function About() {
   )
 }
 
-/** A link out to a source. Same treatment as the Phansora link in the footer. */
+/** A link out to a source. Same treatment as the Skylanex link in the footer. */
 function Source({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <a
@@ -141,18 +141,18 @@ export function Footer() {
           {/* Back to the suite this belongs to. New tab and rel=noopener: it leaves the
               site, which is the same rule the product cards on skylanex.com follow. */}
           <a
-            href="https://www.phansora.com"
+            href="https://www.skylanex.com"
             target="_blank"
             rel="noopener"
             className="text-brass-300 underline decoration-brass-300/40 underline-offset-4 transition-colors hover:text-brass-200 hover:decoration-brass-200"
           >
-            Phansora
+            Skylanex
           </a>{' '}
           product
         </p>
 
         <p className="text-base text-ink-300">
-          © {new Date().getFullYear()} Phansora
+          © {new Date().getFullYear()} Skylanex
         </p>
       </div>
     </footer>

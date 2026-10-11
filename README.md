@@ -1,6 +1,6 @@
 # Archis
 
-New names, built from ancient roots. A Phansora product.
+New names, built from ancient roots. A Skylanex product.
 
 You type the ideas a name should carry — `wolf, night` — and Archis finds the words for
 them across the old languages and forms a new word from them **the way their own language

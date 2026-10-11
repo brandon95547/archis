@@ -315,7 +315,7 @@ export default function App() {
       </main>
 
       {/* The footer stands on every view, unlike the landing sections above it: a reader
-          three searches deep should still be able to find their way back to Phansora. */}
+          three searches deep should still be able to find their way back to Skylanex. */}
       <Footer />
 
       {open && (
