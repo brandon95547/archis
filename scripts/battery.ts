@@ -19,7 +19,8 @@
  *   · every word has a field of associations, the reader follows it outward in rings, and
  *     a word reached in one sense is not followed in another
  *   · a search goes on: "More names" keeps finding fresh ones, hundreds deep, in many
- *     languages, without repeating one or miscounting the languages on the page
+ *     languages, without repeating one or miscounting the languages on the page — and
+ *     asked for 250 at once it returns the same names it gives nine at a time
  *   · and a search that does run out says it is exhausted rather than that it failed
  *
  * A query that comes back with fewer names than asked for is reported and is not a
@@ -306,6 +307,19 @@ for (const [word, answers] of [['music', ['music']], ['piano', ['harp', 'lute']]
     fail(`the first page for "${WIDE}" has no name on "${word}".`)
   }
 }
+
+// A search is asked for hundreds at once, which is how the page asks. The batch is the
+// pages a person would have turned, nine at a time — nothing is lost or reshuffled by
+// asking for them together — and the next batch repeats none of it.
+const BATCH = 250
+const batch = await service.generate({ query: WIDE, refinements: { ...plain, count: BATCH } })
+const together = new Set(batch.names.map((n) => n.name))
+if (batch.names.length !== BATCH || together.size !== BATCH) fail(`a batch of ${BATCH} for "${WIDE}" came back as ${batch.names.length} names, ${together.size} of them different.`)
+const turned = shown.names.slice(0, Math.floor(BATCH / plain.count) * plain.count)
+const lost = turned.filter((n) => !together.has(n.name))
+if (lost.length > 0) fail(`a batch of ${BATCH} is missing ${lost.length} of the names the same pages give nine at a time: ${lost.slice(0, 5).map((n) => n.name).join(', ')}.`)
+const after = await service.generate({ query: WIDE, refinements: { ...plain, count: BATCH }, exclude: batch.names.map((n) => n.name) })
+if (after.names.length !== BATCH || after.names.some((n) => together.has(n.name))) fail(`the second batch of ${BATCH} for "${WIDE}" came back short or repeated the first.`)
 
 // And a search that does run out says so. Honey is one word with two neighbours.
 const SPARSE = 'honey'

@@ -207,9 +207,13 @@ marked down for what the page already has — the same language, root, meaning, 
 reading. Those are prices, not limits, so a search only two languages can answer still
 fills. The invented languages come last, together.
 
-**More names.** A search is not a fixed number of results. Everything it makes at its
-current reach is worked out once, ranked, and remembered; "More names" turns the page, and
-never repeats a name. It starts with what was typed. When the names left have thinned to
+**More names.** A search is not a fixed number of results. It comes back 250 names at a
+time (*Results* sets it to 100, 250 or 500), and "More names" brings as many again, never
+repeating one, until the search says it is done. Everything a search makes at its current
+reach is worked out once, ranked, and remembered. A batch is built a page of nine at a
+time, because that is the size `spread` can balance — the typed words taking turns, no
+language or ending leaned on twice — so a batch is simply the pages a person would have
+turned, in order. It starts with what was typed. When the names left have thinned to
 less than a page within sixteen points of the best, the next ring is fetched and its names
 join the ranking — so the first pages are the names nearest the search, a better-sounding
 name one link out is not kept waiting behind hundreds of also-rans, and the page says what

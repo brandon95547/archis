@@ -69,9 +69,9 @@ export function RefinementBar({ value, onChange, disabled }: Props) {
         label="Results"
         name="count"
         options={[
-          ['6', '6'],
-          ['9', '9'],
-          ['12', '12'],
+          ['100', '100'],
+          ['250', '250'],
+          ['500', '500'],
         ]}
         value={String(value.count)}
         onChange={(next) => set('count', Number(next))}

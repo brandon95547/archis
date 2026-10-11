@@ -19,9 +19,14 @@ const DEFAULT_REFINEMENTS: Refinements = {
   length: 'medium',
   sound: 'balanced',
   era: 'balanced',
-  count: 9,
+  // A search is for looking through, and nine names is not a look. This is how many come
+  // back at once; "More names" brings as many again, for as long as the search has them.
+  count: 250,
   mix: false,
 }
+
+/** The loading skeleton stands for "names are coming", not for each of them. */
+const SKELETONS = 12
 
 export default function App() {
   // Built once. The service is a dependency, not state — swapping engines is a config
@@ -257,7 +262,7 @@ export default function App() {
               </button>
             </div>
           ) : busy && !result ? (
-            <Loading count={refinements.count} />
+            <Loading count={Math.min(refinements.count, SKELETONS)} />
           ) : !result ? (
             <Introduction />
           ) : result.names.length === 0 ? (

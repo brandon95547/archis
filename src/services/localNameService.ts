@@ -89,6 +89,26 @@ export class LocalNameService implements NameService {
     const more = exclude.length > 0
     const excluded = new Set(exclude.map((n) => n.toLowerCase()))
 
+    // A batch is made a page at a time. A page is the size a person takes in at a
+    // glance, and it is what `spread` balances: the typed words take turns across it and
+    // no language, root or ending is leaned on twice while another has had none. Asked
+    // for 250 names in one go, it would share them out once and then have nothing left
+    // to say about the two-hundredth. So a batch is the pages a person would have
+    // turned, in order — which also means a search shows the same names in the same
+    // order whether they are asked for nine at a time or all at once.
+    const page = Math.min(PAGE, refinements.count)
+    const choose = (from: Scored[], size: number) => (refinements.mix ? diversify(from, size) : spread(from, size))
+    const chosen: Scored[] = []
+    /** The next page out of what is left of a pool. False when there is nothing left. */
+    const turn = (left: Scored[]) => {
+      const taken = choose(left, Math.min(page, refinements.count - chosen.length))
+      for (const entry of taken) {
+        chosen.push(entry)
+        excluded.add(entry.name)
+      }
+      return taken.length > 0
+    }
+
     // A search goes as far out as it has to and no further. It starts with what was
     // typed. The first ring of what that leads to is fetched when the names left have
     // thinned to less than a page of good ones, and the next ring when that one has —
@@ -99,13 +119,21 @@ export class LocalNameService implements NameService {
     let fresh: Scored[] = []
     if (read.weights.size > 0) {
       let best = 0
-      for (let depth = 0; ; depth += 1) {
-        if (depth > 0) read = await this.read(query, depth)
-        const pool = await this.pool(query, read, refinements, depth)
-        best = Math.max(best, pool[0]?.score ?? 0)
-        fresh = pool.filter((entry) => !excluded.has(entry.name))
-        if (!read.deeper) break
-        if (fresh.length >= refinements.count && fresh[refinements.count - 1].score >= best - WIDEN_AFTER) break
+      let depth = 0
+      while (chosen.length < refinements.count) {
+        for (; ; depth += 1) {
+          if (depth > 0) read = await this.read(query, depth)
+          const pool = await this.pool(query, read, refinements, depth)
+          best = Math.max(best, pool[0]?.score ?? 0)
+          fresh = pool.filter((entry) => !excluded.has(entry.name))
+          if (!read.deeper) break
+          if (fresh.length >= page && fresh[page - 1].score >= best - WIDEN_AFTER) break
+        }
+        if (!turn(fresh)) break
+        // Everything above may already be in memory, and then nothing in it ever waits:
+        // a long batch would hold the page still without so much as showing that it
+        // is working. Every few pages, let the browser draw.
+        if (chosen.length % (page * 4) === 0) await breathe()
       }
     }
     const { concepts, weights, unmatched, recast, keywords } = read
@@ -124,12 +152,19 @@ export class LocalNameService implements NameService {
     // A search no language can answer firmly — one rare word, say — is tried again with
     // the loosely matched roots let in. Only then: they are the head noun of a longer
     // gloss, and thin ground for a name.
-    if (!refinements.mix && fresh.length < 3 && !more) {
-      fresh = (await this.pool(query, read, refinements, MAX_RINGS, LOOSE)).filter((entry) => !excluded.has(entry.name))
+    if (!refinements.mix && chosen.length < 3 && !more) {
+      // The loose pool holds the firm names too, so the batch starts again from it.
+      for (const entry of chosen.splice(0)) excluded.delete(entry.name)
+      const loose = await this.pool(query, read, refinements, MAX_RINGS, LOOSE)
+      do fresh = loose.filter((entry) => !excluded.has(entry.name))
+      while (chosen.length < refinements.count && turn(fresh))
     }
 
-    const chosen = refinements.mix ? diversify(fresh, refinements.count) : spread(fresh, refinements.count)
-    const names = chosen.map((entry) => entry.build())
+    // Each page keeps the invented languages for its end. So does the batch: all of
+    // them after all of the old ones, in the order they were chosen.
+    const invented = (entry: Scored) => LANGUAGES[entry.language ?? '']?.provenance === 'constructed'
+    const ordered = refinements.mix ? chosen : [...chosen.filter((entry) => !invented(entry)), ...chosen.filter(invented)]
+    const names = ordered.map((entry) => entry.build())
     const languages = traditions(names)
 
     if (names.length === 0) {
@@ -154,7 +189,7 @@ export class LocalNameService implements NameService {
 
     // A word that was read and then appears in no name at all has to be owned up to: the
     // rest of the page would otherwise look like an answer to the whole search.
-    const offered = new Set(fresh.flatMap((entry) => entry.keys))
+    const offered = new Set([...fresh, ...chosen].flatMap((entry) => entry.keys))
     const verbs = new Set(recast.map(({ word }) => word))
     // A verb with no noun to stand for it is reported below, in its own words.
     const dropped = new Set(recast.filter(({ as }) => as.length === 0).map(({ word }) => word))
@@ -202,6 +237,9 @@ export class LocalNameService implements NameService {
     }
   }
 }
+
+/** A turn of the event loop, so the page can draw. */
+const breathe = () => new Promise<void>((resolve) => setTimeout(resolve))
 
 /** The words we could not place, quoted, at most three of them. */
 function quote(words: string[]): string {
@@ -271,6 +309,12 @@ const JOINED = 3
  */
 const FIRM = 0.5
 const LOOSE = 0.3
+
+/**
+ * How many names a page is balanced across. A batch of any size is made of these — see
+ * `generate` — and it is what the widening rule below counts in.
+ */
+const PAGE = 9
 
 /**
  * How far below the best name of a search the names left may fall before the search
