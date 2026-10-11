@@ -110,13 +110,13 @@ const EXAMPLES: Example[] = [
     languages: 'Ancient Greek',
   },
   {
-    name: 'Laugnawita',
+    name: 'Fundari',
     image: '/images/archis-example-right.webp',
     alt: 'A dark stone hall with a shaft of light falling at the far end.',
     concepts: ['hidden knowledge', 'discovery', 'transformation'],
-    roots: '*laugnaz (hidden) + *witą (knowledge)',
-    meaning: 'Hidden knowledge.',
-    languages: 'Proto-Germanic',
+    roots: 'fundr (finding, discovery) + -ari (one whose work is)',
+    meaning: 'Keeper of the discovery.',
+    languages: 'Old Norse',
   },
 ]
 

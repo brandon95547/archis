@@ -566,6 +566,39 @@ const ofThe = (what: string) => (x: string) => `${what} of the ${x}`
 /** Marks a name element as one of kinship or smallness, which not every noun can take. */
 const kin = (affix: Affix): Affix => ({ ...affix, kinship: true })
 
+/** "Hipp-eús" is a horseman and "bōc-ere" a scribe: the one whose business the thing is. */
+const worker = ofThe('Keeper')
+const bornOf = ofThe('Born')
+const richIn = (x: string) => `Rich in ${x}`
+
+/** For an ending that only a stem closing on a consonant takes cleanly: aqu-ōsus, not glōri-ōsus. */
+const consonantStem = (base: Root) => !vowelY(last(stemOf(base)))
+
+/**
+ * An ending on the whole word as it is cited, for the languages that add to the stem
+ * and change nothing: Sanskrit bhaga + -vat. `fits` says which words may take it.
+ */
+function wordEnding(
+  text: string,
+  means: string,
+  reading: (x: string) => string,
+  note: string,
+  fits: (word: string) => boolean,
+): Affix {
+  return {
+    text,
+    side: 'suffix',
+    means,
+    reading,
+    note,
+    attach: (base) => {
+      const word = wordOf(base)
+      if (!word || base.pos !== 'n' || !fits(word)) return null
+      return { pieces: [stemPiece(base, word, 'stem'), { text, kind: 'link', label: 'ending', gloss: means }], note }
+    },
+  }
+}
+
 /** An ending that turns an adjective into the name of the quality: new → newness. */
 const quality = (text: string, note: string) =>
   suffix(text, 'the quality of being', (x) => `Being ${x}`, note, () => true, 'a')
@@ -585,6 +618,11 @@ const FORMERS: Record<string, Former> = {
       kin(suffix('ion', 'little', (x) => `Little ${x}`, 'Greek makes a diminutive with -ion, as in paid-íon, "little child".')),
       suffix('ios', 'of, belonging to', (x) => `Of the ${x}`, 'Greek makes "belonging to" with -ios, as in ourán-ios, "of the sky".'),
       quality('otes', 'Greek names a quality with -ótēs, as in kain-ótēs, "newness".'),
+      suffix('ikos', 'of, in the manner of', (x) => `Of the ${x}`, 'Greek makes "of, in the manner of" with -ikós, as in basil-ikós, "kingly".'),
+      suffix('eus', 'one whose work is', worker, 'Greek names a person by what he works with using -eús, as in hipp-eús, "horseman", and keram-eús, "potter".'),
+      suffix('on', 'place of', ofThe('Place'), 'Greek names the place where something is kept with -ṓn, as in hipp-ṓn, "stable", and ampel-ṓn, "vineyard".'),
+      kin(suffix('iskos', 'little', (x) => `Little ${x}`, 'Greek makes a diminutive with -ískos, as in aster-ískos, "little star".')),
+      suffix('ogenes', 'born of', bornOf, 'Greek names end in -genḗs, "born of", on the linking -o-, as in Herm-o-génēs, "born of Hermes".', consonantStem),
     ],
     pairs: true,
   },
@@ -604,6 +642,9 @@ const FORMERS: Record<string, Former> = {
       kin(suffix('ula', 'little', (x) => `Little ${x}`, 'Latin makes a diminutive with -ula, as in stēll-ula, "little star".',
         (base) => /[^aeiou]a$/.test(wordOf(base)))),
       quality('itas', 'Latin names a quality with -itās, as in nov-itās, "newness".'),
+      suffix('anus', 'belonging to', (x) => `Of the ${x}`, 'Latin makes "belonging to" with -ānus, as in mont-ānus, "of the mountain".', consonantStem),
+      suffix('osus', 'full of', (x) => `Full of ${x}`, 'Latin makes "full of" with -ōsus, as in fām-ōsus, "full of fame".', consonantStem),
+      suffix('arius', 'one whose work is', worker, 'Latin names a person by what he works with using -ārius, as in argent-ārius, "silver-worker", and libr-ārius, "scribe".', consonantStem),
     ],
     pairs: true,
   },
@@ -636,10 +677,22 @@ const FORMERS: Record<string, Former> = {
           }
         },
       },
+      wordEnding('vat', 'possessing', richIn, 'Sanskrit makes "possessing" with -vat, as in bhaga-vat, "possessing fortune".', (word) => /a$/.test(word)),
+      wordEnding('mat', 'possessing', richIn, 'Sanskrit makes "possessing" with -mat after i and u, as in dhī-mat, "possessing thought", wise.', (word) => /[iu]$/.test(word)),
+      wordEnding('ja', 'born of', bornOf, 'Sanskrit makes "born of" with -ja, as in jala-ja, "born of the water", the lotus.', (word) => /[aiu]$/.test(word)),
+      kin(wordEnding('ka', 'little', (x) => `Little ${x}`, 'Sanskrit makes a diminutive with -ka, as in putra-ka, "little son".', (word) => /a$/.test(word))),
     ],
     pairs: true,
   },
-  pali: { headFirst: false, adjective: 'first', compound: pali },
+  pali: {
+    headFirst: false,
+    adjective: 'first',
+    compound: pali,
+    affixes: [
+      wordEnding('vant', 'possessing', richIn, 'Pali makes "possessing" with -vant, as in sīla-vant, "possessing virtue".', (word) => /a$/.test(word)),
+      wordEnding('ja', 'born of', bornOf, 'Pali makes "born of" with -ja, as in paṅka-ja, "born of the mud", the lotus.', (word) => /[aiu]$/.test(word)),
+    ],
+  },
   oldpersian: {
     headFirst: false,
     adjective: 'first',
@@ -655,6 +708,9 @@ const FORMERS: Record<string, Former> = {
     affixes: [
       kin(suffix('ing', 'descendant of', ofThe('Descendant'), 'Old English names a descendant with -ing, as in æþel-ing, "one of noble kin".')),
       quality('nes', 'Old English names a quality with -nes, as in clǣn-nes, "cleanness".'),
+      suffix('ere', 'one whose work is', worker, 'Old English names a person by what he works with using -ere, as in bōc-ere, "scribe", from bōc, "book".'),
+      suffix('dom', 'the realm or state of', ofThe('Realm'), 'Old English names a realm or a state with -dōm, as in cyning-dōm, "kingdom".'),
+      suffix('ling', 'one belonging to', ofThe('One'), 'Old English names one who belongs to something with -ling, as in hȳr-ling, "hireling".'),
     ],
   },
   oldnorse: {
@@ -664,6 +720,9 @@ const FORMERS: Record<string, Former> = {
     affixes: [
       kin(suffix('ing', 'descendant of', ofThe('Descendant'), 'Old Norse names a descendant with -ingr, as in Ylf-ingr, "one of the wolf\'s kin"; the nominative -r is left off, as it usually is in English.')),
       quality('leik', 'Old Norse names a quality with -leikr, as in skjót-leikr, "swiftness"; the nominative -r is left off.'),
+      kin(suffix('ung', 'descendant of', ofThe('Descendant'), 'Old Norse names a line with -ungr, as in Vǫls-ungr, "one of Vǫlsi\'s line"; the nominative -r is left off.')),
+      suffix('ari', 'one whose work is', worker, 'Old Norse names a person by what he works with using -ari, as in dóm-ari, "judge", from dómr, "judgment".'),
+      suffix('dom', 'the realm or state of', ofThe('Realm'), 'Old Norse names a realm or a state with -dómr, as in konung-dómr, "kingdom"; the nominative -r is left off.'),
     ],
   },
   gothic: {
@@ -676,6 +735,8 @@ const FORMERS: Record<string, Former> = {
     affixes: [
       kin(suffix('ila', 'little', (x) => `Little ${x}`, 'Gothic makes a diminutive with -ila, as in Wulf-ila, "little wolf".')),
       quality('itha', 'Gothic names a quality with -iþa, as in hauh-iþa, "height".'),
+      suffix('areis', 'one whose work is', worker, 'Gothic names a person by what he works with using -areis, as in bōk-areis, "scribe", from bōka, "letter, book".'),
+      suffix('eins', 'made of', (x) => `Made of ${x}`, 'Gothic makes "made of" with -eins, as in stain-eins, "of stone".'),
     ],
   },
   pgmc: {
@@ -685,6 +746,9 @@ const FORMERS: Record<string, Former> = {
       language: 'Proto-Germanic, as reconstructed,', link: 'a', isVowel: vowel,
       example: '*Aþal-a-wulfaz, the form behind Old English Æþelwulf',
     }),
+    affixes: [
+      kin(suffix('ingaz', 'descendant of', ofThe('Descendant'), 'Proto-Germanic names one who belongs to a line with *-ingaz, as in *kun-ingaz, "man of the kin", the word behind "king".')),
+    ],
   },
   pcelt: {
     headFirst: false,
@@ -693,6 +757,10 @@ const FORMERS: Record<string, Former> = {
       language: 'Proto-Celtic, as reconstructed,', link: 'o', isVowel: vowel, bareAfterVowel: true,
       example: 'Gaulish Dumn-o-rīx, "world-king"',
     }),
+    affixes: [
+      suffix('akos', 'belonging to', (x) => `Of the ${x}`, 'Celtic makes "belonging to" with *-ākos, as in the Gaulish place name Ebur-ācum, "the place of the yews".'),
+      suffix('ogenos', 'born of', bornOf, 'Celtic names end in *-genos, "born of", on the linking -o-, as in Gaulish Camul-o-genus, "born of Camulos".', consonantStem),
+    ],
   },
   hebrew: {
     headFirst: true,
@@ -702,12 +770,23 @@ const FORMERS: Record<string, Former> = {
       kin(prefix('ben', 'son of', ofThe('Son'), 'Hebrew names open with Ben-, "son of", as in Ben-ʾônî, "son of my sorrow".')),
       kin(prefix('bat', 'daughter of', ofThe('Daughter'), 'Hebrew names open with Bat-, "daughter of", as in Bat-ševaʿ, "daughter of the oath".')),
       prefix('bet', 'house of', ofThe('House'), 'Hebrew place names open with Bêt-, "house of", as in Bêt-ʾēl, "house of God".'),
+      prefix('ish', 'man of', ofThe('Man'), 'Hebrew names open with ʾÎš-, "man of", as in ʾÎš-bōšet, "man of shame".'),
+      kin(prefix('abi', 'father of', ofThe('Father'), 'Hebrew names open with ʾĂbî-, "father of", as in ʾĂbî-šālôm, "father of peace".')),
+      prefix('baal', 'master of', ofThe('Master'), 'Hebrew calls the master of a thing its baʿal, as in baʿal ha-ḥălōmôt, "master of dreams".'),
+      prefix('en', 'spring of', ofThe('Spring'), 'Hebrew place names open with ʿÊn-, "spring of", as in ʿÊn-gedî, "spring of the kid".'),
+      prefix('har', 'mount of', ofThe('Mount'), 'Hebrew names a mountain with Har-, "mount of", as in Har-Məgiddô, "mount of Megiddo".'),
+      prefix('migdal', 'tower of', ofThe('Tower'), 'Hebrew place names open with Migdal-, "tower of", as in Migdal-ʿēder, "tower of the flock".'),
+      prefix('kiryat', 'town of', ofThe('Town'), 'Hebrew place names open with Qiryat-, "town of", as in Qiryat-yəʿārîm, "town of the forests".'),
     ],
   },
   aramaic: {
     headFirst: true,
     adjective: 'none',
-    affixes: [kin(prefix('bar', 'son of', ofThe('Son'), 'Aramaic names open with Bar-, "son of", as in Bar-Kokhba, "son of the star".'))],
+    affixes: [
+      kin(prefix('bar', 'son of', ofThe('Son'), 'Aramaic names open with Bar-, "son of", as in Bar-Kokhba, "son of the star".')),
+      prefix('bet', 'house of', ofThe('House'), 'Aramaic place names open with Bêt-, "house of", as in Bêt-ḥesdā, "house of mercy".'),
+      prefix('abd', 'servant of', ofThe('Servant'), 'Aramaic names open with ʿAbd-, "servant of", as in ʿAbd-īšōʿ, "servant of Jesus".'),
+    ],
   },
   akkadian: {
     headFirst: true,
@@ -716,6 +795,9 @@ const FORMERS: Record<string, Former> = {
     affixes: [
       prefix('bel', 'lord of', ofThe('Lord'), 'Akkadian titles open with bēl, "lord of", followed by the genitive, as in bēl māti, "lord of the land".', akkadianGenitive),
       kin(prefix('mar', 'son of', ofThe('Son'), 'Akkadian names open with mār, "son of", followed by the genitive.', akkadianGenitive)),
+      prefix('awil', 'man of', ofThe('Man'), 'Akkadian names open with awīl, "man of", followed by the genitive, as in Awīl-Marduk, "man of Marduk".', akkadianGenitive),
+      prefix('warad', 'servant of', ofThe('Servant'), 'Akkadian names open with warad, "servant of", followed by the genitive, as in Warad-Sîn, "servant of Sîn".', akkadianGenitive),
+      prefix('belet', 'lady of', ofThe('Lady'), 'Akkadian titles open with bēlet, "lady of", followed by the genitive, as in bēlet ilī, "lady of the gods".', akkadianGenitive),
     ],
   },
   sumerian: {
@@ -726,6 +808,8 @@ const FORMERS: Record<string, Former> = {
       prefix('en', 'lord of', ofThe('Lord'), 'Sumerian names open with En-, "lord", as in En-líl.'),
       prefix('nin', 'lady of', ofThe('Lady'), 'Sumerian names open with Nin-, "lady", as in Nin-ḫursaĝ, "lady of the mountain".'),
       prefix('lu', 'man of', ofThe('Man'), 'Sumerian names open with Lú-, "man of", as in Lú-Nanna.'),
+      prefix('ur', 'servant of', ofThe('Servant'), 'Sumerian names open with Ur-, "man, servant of", as in Ur-Namma, "servant of Namma".'),
+      prefix('e', 'house of', ofThe('House'), 'Sumerian temple names open with É-, "house", as in É-kur, "mountain house", and É-anna, "house of heaven".'),
     ],
   },
   egyptian: {
@@ -736,6 +820,10 @@ const FORMERS: Record<string, Former> = {
       prefix('neb', 'lord of', ofThe('Lord'), 'Egyptian titles open with nb, "lord of", as in nb tꜣwy, "lord of the Two Lands".'),
       prefix('meri', 'beloved of', ofThe('Beloved'), 'Egyptian names open with mry, "beloved of", as in Mery-Amun.'),
       kin(prefix('sa', 'son of', ofThe('Son'), 'Egyptian names open with sꜣ, "son of", as in sꜣ Rꜥ, "son of Ra".')),
+      kin(prefix('sat', 'daughter of', ofThe('Daughter'), 'Egyptian names open with sꜣt, "daughter of", as in Sat-Hathor, "daughter of Hathor".')),
+      prefix('per', 'house of', ofThe('House'), 'Egyptian place names open with pr, "house of", as in Per-Bast, "house of Bastet".'),
+      prefix('hem', 'servant of', ofThe('Servant'), 'Egyptian titles open with ḥm, "servant of", as in ḥm-nṯr, "servant of the god", a priest.'),
+      prefix('hut', 'mansion of', ofThe('Mansion'), 'Egyptian names a temple or an estate with ḥwt, "mansion of", as in Ḥwt-Ḥr, "mansion of Horus", the name Hathor.'),
     ],
   },
   geez: {
@@ -745,6 +833,11 @@ const FORMERS: Record<string, Former> = {
     affixes: [
       prefix('gabra', 'servant of', ofThe('Servant'), 'Ge\'ez names open with Gabra-, "servant of", as in Gabra Masqal, "servant of the Cross".'),
       kin(prefix('walda', 'son of', ofThe('Son'), 'Ge\'ez names open with Walda-, "son of".')),
+      kin(prefix('walatta', 'daughter of', ofThe('Daughter'), 'Ge\'ez names open with Walatta-, "daughter of", as in Walatta Petros, "daughter of Peter".')),
+      prefix('hayla', 'power of', ofThe('Power'), 'Ge\'ez names open with Ḫayla-, "power of", as in Ḫayla Śəllase, "power of the Trinity".'),
+      prefix('zara', 'seed of', ofThe('Seed'), 'Ge\'ez names open with Zarʾa-, "seed of", as in Zarʾa Yāʿqob, "seed of Jacob".'),
+      prefix('amda', 'pillar of', ofThe('Pillar'), 'Ge\'ez names open with ʿAmda-, "pillar of", as in ʿAmda Ṣəyon, "pillar of Zion".'),
+      prefix('takla', 'plant of', ofThe('Plant'), 'Ge\'ez names open with Takla-, "plant of", as in Takla Hāymānot, "plant of faith".'),
     ],
   },
   quenya: {

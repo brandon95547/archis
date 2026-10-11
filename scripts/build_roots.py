@@ -1560,6 +1560,8 @@ def main() -> None:
     print(f"  {'all':12} {len(roots):6} {status['verified']:9} {status['unconfirmed']:8} {status['flagged']:8}")
     print(f'  {len(words)} existing words in the filter, {len(bloom(words)) / 1024:.0f} KB')
     print(f'  {SHARDS} shards, {sum(sizes) / 1024:.0f} KB in all, largest {max(sizes) / 1024:.1f} KB')
+    # The shards were written fresh, without the association fields a search widens along.
+    print('\nNow run scripts/build_field.py — the shards have no fields until it has.')
 
 
 if __name__ == '__main__':

@@ -31,10 +31,13 @@ npx jiti scripts/battery.ts "wolf, night" # the names for one query, with their 
 ```
 
 The battery exits non-zero if a query goes unread or comes back with no names, if one root
-keeps answering unrelated queries, if a worked example on the landing page is no longer
-what the engine returns, if a word of a four-word search goes unanswered or the order of
-the words changes the page, or if "More names" miscounts what is on screen. Run it after
-touching the reader, the engine or the database.
+keeps answering unrelated queries, if a language's rule or ending stops reproducing the
+real word it is modelled on, if a worked example on the landing page is no longer what the
+engine returns, if a word of a four-word search goes unanswered or the order of the words
+changes the page, if the association fields are missing or are followed in the wrong
+sense, or if "More names" repeats a name, miscounts what is on screen, or runs dry on a
+search that should go on for hundreds. Run it after touching the reader, the engine or the
+database.
 
 ## How a name is made
 
@@ -68,6 +71,44 @@ read and still appears in no name is named on the page too.
 A query too thin to blend — one word, or two that mean much the same — widens along the
 thesaurus at a lower weight, so the thing actually asked for still leads.
 
+**Then the search goes outward, a ring at a time.** What was typed and its synonyms is a
+small place: `music, piano, learn` reads as seven meanings, with roots in a dozen
+languages, and used to end at 44 names. Every word also has a *field* — what it brings to
+mind beyond what means the same — and the reader follows it:
+
+| ring | what is in it | for `music` | weight |
+|---|---|---|---|
+| 0 | the word, and what stands in for it | music | 1 |
+| 1 | what it leads to | melody, harmony, rhythm, sound, tone, song | about ⅔ |
+| 2 | what those lead to | voice, echo, hymn, ballad, dance, peace | about ½ |
+| 3 | and those | speech, word, calm, joy, verse | about ⅓ |
+
+The field comes from two places. `ASSOCIATIONS` in `concepts.ts` is written by hand for
+the words people name things after — moon → night, wolf → pack, harp → string — because
+no dictionary records those. Everything else comes from the database: each shard carries,
+for every word, the meanings WordNet and the dictionaries' own glosses tie it to
+(`scripts/build_field.py`).
+
+Three rules keep the rings *meaningful* rather than merely large:
+
+- **Weights fall with every link**, so what is two links from the query can never outrank
+  what is one, and each typed word's ring is capped at its strongest dozen or so.
+- **A word reached by association is followed in the sense it was reached in.** String,
+  reached from a harp, leads on to the fiddle and the chord — not to rope and twine,
+  which is the other thing a string is. The database's links are stored grouped by sense,
+  each group with the words that place it, and past the first ring a group is followed
+  only if it ties back to what the typed word has already led to. What was *typed* is the
+  user's in every sense and needs no tie.
+- **A link must land on roots that mean it.** WordNet says a cub is first of all a
+  greenhorn, so "learner" leads to "cub" — and every root filed under cub is a lion's or
+  a bear's. The build reads the roots' own glosses and drops a link the roots do not
+  carry. It also leaves out what is merely a kind of something sprawling (a machine's
+  kinds are the calculator and the digger) and a thing's siblings when it has dozens.
+
+The rings are fetched on demand — see *More names* below — and each typed word keeps its
+own, so the page is still shared between the words and the order they were typed in still
+changes nothing.
+
 Two things about the house concepts (the `CONCEPTS` list) are worth knowing before adding
 to the vocabulary. They read like ordinary English and are not: `order` is cosmic law —
 ṛta, ma'at, dharma, dào — and `foundation` is entangled with truth, because two of the
@@ -97,9 +138,16 @@ across languages.
 | Sindarin | second word's first consonant softens (c → g) | *mor + coth → Morgoth* |
 | Khuzdul, Adûnaic, Black Speech | describing word first | *Kheled-zâram*, *Nazg-ûl* |
 
-Single-root names use the language's own name elements — Greek *-ídēs* "son of", Latin
-*-ānus* "of", Old English *-ing* "descendant of", Quenya *-ndil* "friend of", Sumerian
-*En-* "lord of", Aramaic *Bar-* "son of" — each with the example it is modelled on.
+Single-root names use the language's own name elements, each with the real word it is
+modelled on, and the detail panel quotes it. There are about ninety across the languages —
+what something belongs to (Greek *-ikós*, Latin *-ānus*, Celtic *-ākos*), who descends
+from it (Greek *-ídēs*, Old English *-ing*, Aramaic *Bar-*), who works with it (Greek
+*hipp-eús*, Latin *argent-ārius*, Old English *bōc-ere*, Gothic *bōk-areis*), where it is
+kept (Greek *hipp-ṓn*, Hebrew *Bêt-*, Egyptian *Per-*, Sumerian *É-*), what is born of it
+or rich in it (Sanskrit *jala-ja*, *bhaga-vat*), its realm (Old English *cyning-dōm*), and
+the openings of names and places (Hebrew *ʿÊn-*, *Migdal-*, Akkadian *Warad-*, Ge'ez
+*Ḫayla-*, Quenya *-ndil*). Only an ending that fits is used: Latin *-ōsus* goes on a
+consonant stem, Sanskrit *-vat* after *a* and *-mat* after *i* and *u*.
 
 The rules that keep this honest:
 
@@ -121,8 +169,10 @@ The original engine: two roots from two different languages, cut and fused by so
 language ever made a word this way, so it is something the user asks for. Every join
 trims a root back to the part that carries it, spends one vowel where two would collide,
 or opens a cluster that cannot be said. An invented-language root is never blended with
-an ancient one. The pool is capped at three roots per language and six per family, which
-is what stops Greek and Latin from answering every query between them.
+an ancient one. The pool is capped at three roots per language, six per family and forty
+in all — every root is tried against every other, so its size is squared in the time a
+search takes — which is also what stops Greek and Latin from answering every query between
+them. The caps rise as the search widens.
 
 **4. Judge** — `src/lib/score.ts` and `src/services/localNameService.ts`
 Rejection and ranking are separate. A hard rule written as a heavy penalty is eventually
@@ -131,9 +181,11 @@ outweighed by something else and ships the name anyway.
 Rejected outright, in either mode: a root flagged in the audit; a name that is already a
 headword in any source (see *Names that already exist*); brand lookalikes; unfortunate
 substrings; fewer than two syllables or more than four; crowded consonants; too few or too
-many vowels; two roots that mean the same thing; and anything scoring under a fixed floor.
-**A weak name is left out rather than shown** — a search can come back with four names
-instead of nine, and the page says so.
+many vowels; two roots that mean the same thing; and anything that does not sound good
+enough to show. That bar rises with distance: a name on the typed word itself may be
+merely sound, and one reached three links out has to earn its place by being good to say.
+**A weak name is left out rather than shown** — a thin search can come back with four
+names instead of nine, and the page says so.
 
 Ranked on how the name is said and kept, and on how well it answers:
 
@@ -155,9 +207,21 @@ marked down for what the page already has — the same language, root, meaning, 
 reading. Those are prices, not limits, so a search only two languages can answer still
 fills. The invented languages come last, together.
 
-"More names" asks for the next page of the same search. The languages above the grid are
-counted from every name on screen (`src/lib/traditions.ts`), and when the search has
-nothing left the page says so rather than reporting a failure.
+**More names.** A search is not a fixed number of results. Everything it makes at its
+current reach is worked out once, ranked, and remembered; "More names" turns the page, and
+never repeats a name. It starts with what was typed. When the names left have thinned to
+less than a page within sixteen points of the best, the next ring is fetched and its names
+join the ranking — so the first pages are the names nearest the search, a better-sounding
+name one link out is not kept waiting behind hundreds of also-rans, and the page says what
+it is now drawing on ("Also drawing on what those lead to: melody, song, voice…"). Each
+ring also lets a language build on more of its roots — 12, then 14, 22 and 30 — where it
+used to be eight at any distance, which with two roots per meaning was the rest of why a
+search ended at forty. `music, piano, learn` now runs to several thousand names in
+seventeen languages before it says it is done.
+
+The languages above the grid are counted from every name on screen
+(`src/lib/traditions.ts`), and when a search does have nothing left the page says so
+rather than reporting a failure.
 
 ## Invented languages
 
@@ -194,7 +258,13 @@ data-src/fetch.sh                                   # once — about 2.5 GB of d
 python3 -m venv data-src/venv
 data-src/venv/bin/pip install nltk wordfreq
 data-src/venv/bin/python scripts/build_roots.py     # --refresh after a new fetch
+data-src/venv/bin/python scripts/build_field.py     # always after build_roots: the fields
 ```
+
+`build_field.py` needs none of the dumps — only the shards and WordNet, which nltk
+fetches into `data-src/nltk_data` on first use — so the association fields can be rebuilt
+on their own. `build_field.py music wolf` prints the fields of those words and writes
+nothing.
 
 **Sources and licenses.** These are shown on the page (About → Sources) because the
 licenses require it:
@@ -255,9 +325,11 @@ people and places included), and a name found in it is dropped. It knows headwor
 an inflected form, or a word no source here records, is not caught, and the detail panel
 says so instead of claiming a name has never been used.
 
-**How it is stored.** One file would be a megabyte to download before the first name. The
-database is cut into 512 shards by a hash of the English word, each shard its own
-fingerprinted file, and a search fetches only the few that hold the words it used.
+**How it is stored.** One file would be ten megabytes to download before the first name.
+The database is cut into 512 shards by a hash of the English word, each shard its own
+fingerprinted file — its roots, its thesaurus and its association fields — and a search
+fetches only the few that hold the words it used: under ten for a first page, a few dozen
+more each time it widens by a ring.
 
 **What is not in it.** Avestan, Phoenician and Proto-Semitic have no machine-readable
 dump at the source used, so those three still have only their hand-written roots, which
