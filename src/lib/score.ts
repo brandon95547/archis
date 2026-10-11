@@ -1,6 +1,6 @@
 import type { Refinements, Root } from '../types'
 import { OVERUSED_ENDINGS, screen } from '../data/blocklist'
-import { harshness, softness, syllabify, syllableCount, vowelRatio } from './phonology'
+import { harshness, softness, stumbles, syllabify, syllableCount, units, vowelRatio } from './phonology'
 import type { Blend } from './blend'
 
 /**
@@ -105,18 +105,41 @@ export function judgeFormed(name: string, refinements: Refinements): Judgement {
   if (/(.)\1\1/.test(name)) return { score: 0, rejected: 'a letter three times running' }
   if (/(.{3,})\1/.test(name)) return { score: 0, rejected: 'the same syllables twice over' }
 
+  // What is ranked here is the name as a name: can it be said, does it sit well, will it
+  // be remembered. What it means is added by the caller, and is the same size of thing
+  // for a name on one root as for a name on two.
   let score = 50
+
+  // Rhythm: the requested length, and the three syllables names sit most comfortably in.
   const [lo, hi] = TARGET_SYLLABLES[refinements.length]
   if (syllables >= lo && syllables <= hi) score += 10
   else score -= 6 * Math.min(Math.abs(syllables - lo), Math.abs(syllables - hi))
   if (syllables === 3) score += 3
 
+  // Memory. A short name is kept; past nine letters each one costs, and steeply — a
+  // thirteen-letter compound is a correct word and nobody's name.
+  if (name.length <= 8) score += 4
+  else if (name.length >= 10) score -= (name.length - 9) * 3 + Math.max(0, name.length - 11) * 2
+
+  // Saying it: consonants that crowd, and spellings a reader has to stop and work out.
   score -= harsh * 4
+  score -= stumbles(name) * 6
   score += (0.5 - Math.abs(vowels - 0.5)) * 16
+
+  // The landing. A final vowel or a sonorant is a name that can be said without stopping.
+  const parts = units(name)
+  const final = parts[parts.length - 1]
+  const closing = parts.length - 1 - parts.findLastIndex((part) => 'aeiouy'.includes(part))
+  if ('aeiouy'.includes(final)) score += 4
+  else if (closing >= 2) score -= 3
+  else if ('lmnrs'.includes(final)) score += 2
+  else if ('ktpqx'.includes(final)) score -= 3
+  else if ('bdg'.includes(final)) score -= 2
+
+  // Sound and feel, as asked for.
   score -= Math.abs(softness(name) - SOUND_TARGET[refinements.sound]) * 20
   const eraTarget = refinements.era === 'ancient' ? 0.8 : refinements.era === 'modern' ? 0.25 : 0.5
   score -= Math.abs(archaism(name) - eraTarget) * 16
-  if (name.length > 10) score -= (name.length - 10) * 3
 
   return { score: Math.max(0, Math.min(100, score)) }
 }
@@ -257,11 +280,15 @@ export function judge(
  * what has already been taken — a different ending, a different opening, and a different
  * pair of roots than the last one that got through.
  */
-export function diversify<T extends { name: string; headId: string; tailId: string; score: number }>(
+export function diversify<T extends { name: string; headId: string; tailId: string; score: number; keys?: number[] }>(
   ranked: T[],
   count: number,
 ): T[] {
   const chosen: T[] = []
+  // The words that were typed are equals, so the strict pass shares the page out between
+  // the ones that have anything to offer.
+  const share = keywordShare(count, new Set(ranked.flatMap((c) => c.keys ?? [])).size)
+  const perKey = new Map<number, number>()
   const endings = new Map<string, number>()
   const openings = new Map<string, number>()
   const pairs = new Set<string>()
@@ -286,6 +313,9 @@ export function diversify<T extends { name: string; headId: string; tailId: stri
       const openingCap = relaxed ? 3 : 2
       const rootCap = relaxed ? 4 : 2
 
+      const keys = candidate.keys ?? []
+      if (!relaxed && keys.some((key) => (perKey.get(key) ?? 0) >= share)) continue
+
       if (pairs.has(pair)) continue
       if ((endings.get(ending) ?? 0) >= endingCap) continue
       if ((openings.get(opening) ?? 0) >= openingCap) continue
@@ -293,6 +323,7 @@ export function diversify<T extends { name: string; headId: string; tailId: stri
       if ((rootUse.get(candidate.tailId) ?? 0) >= rootCap) continue
 
       chosen.push(candidate)
+      keys.forEach((key) => perKey.set(key, (perKey.get(key) ?? 0) + 1))
       pairs.add(pair)
       names.add(candidate.name)
       endings.set(ending, (endings.get(ending) ?? 0) + 1)
@@ -304,4 +335,24 @@ export function diversify<T extends { name: string; headId: string; tailId: stri
   }
 
   return chosen
+}
+
+/**
+ * How many names on a page of `count` any one typed word may be in before the others
+ * have had theirs. A name that joins two words counts for both, so the shares overlap and
+ * add up to more than the page — that is the room a search needs when one of its words
+ * turns out to have little to offer. One word is the whole page.
+ */
+export function keywordShare(count: number, words: number): number {
+  return words <= 1 ? Infinity : Math.ceil(count / words) + 1
+}
+
+/**
+ * Of the typed words a root answers, the one a pool has heard least from so far.
+ * "Education" and "teach" both lead to teacher; a root for teacher counts toward
+ * whichever of them is behind.
+ */
+export function leastServed(keys: number[] | undefined, served: Map<number, number>): number | undefined {
+  if (!keys || keys.length === 0) return undefined
+  return keys.reduce((best, key) => ((served.get(key) ?? 0) < (served.get(best) ?? 0) ? key : best), keys[0])
 }

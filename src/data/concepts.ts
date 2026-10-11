@@ -281,6 +281,12 @@ const WORDS: Record<string, string[]> = {
   sports: ['contest', 'game', 'strength'], esports: ['game', 'play', 'contest'],
   gaming: ['game', 'play', 'contest'], gamer: ['game', 'play', 'contest'],
   toy: ['play', 'child', 'joy'], toys: ['play', 'child', 'joy'],
+  // Instruments nobody in these languages played. Each is sent to the nearest thing that
+  // was — a piano is strings struck in a frame, and the harp and the lyre are its kin —
+  // and to music, which is what the instrument is for. Not to "string": the roots filed
+  // there are cord and thread, and "son of the string" is nobody's name for a piano.
+  piano: ['harp', 'lute', 'music'], pianist: ['musician', 'harp'],
+  guitar: ['lute', 'harp', 'music'], guitarist: ['musician', 'lute'],
   ministry: ['service', 'sacred', 'servant'], charity: ['gift', 'mercy', 'love'],
   nonprofit: ['gift', 'mercy', 'help'], military: ['army', 'war', 'soldier'],
   police: ['guard', 'law', 'watch'],
@@ -331,8 +337,17 @@ const WEIGHT = {
   curated: 0.95,
   /** The vocabulary's extra ideas for a word that has roots of its own: "star" is also sky. */
   aside: 0.7,
-  /** For a word with no root of its own, where the thesaurus is all there is. */
+  /** For a word whose own roots are all adjectives: its noun kin, by distance. */
   near: [0.8, 0.6, 0.4],
+  /**
+   * For a word with no root of its own, where its kin are all there is. The nearest of
+   * them stand in for it at the same weight a hand-written stand-in gets: the word was
+   * typed like any other, and a search of four words is four equal askings, not three
+   * and a footnote because the database happened to have no entry for the fourth.
+   */
+  stand: [0.95, 0.7, 0.5],
+  /** Kin found only at the far end of the thesaurus are a guess, and never count in full. */
+  far: 0.7,
   /** For a word that has roots, when the query is too thin to blend from alone. */
   widen: [0.55, 0.4],
   neighbor: 0.45,
@@ -365,6 +380,27 @@ export interface Interpretation {
    * the same typed word has answered half the search twice.
    */
   origin: Map<string, { word: number; tier: number }>
+  /**
+   * The search as it was typed: every word or phrase that was read, in order. They are
+   * equals. None of them leads, a name answers any one of them or joins two, and the page
+   * is shared out between them.
+   */
+  keywords: Keyword[]
+  /**
+   * Which keywords each meaning answers, as indexes into `keywords`. More than one when
+   * two typed words lead to the same place — "education" and "teach" both reach teacher.
+   */
+  sources: Map<string, number[]>
+}
+
+export interface Keyword {
+  /** The word or phrase, as it was read. */
+  text: string
+  /**
+   * What stands in for it, nearest first, when no language here has a word for the thing
+   * itself. Empty for a word with roots of its own, and for a verb, which `recast` reports.
+   */
+  readAs: string[]
 }
 
 /**
@@ -407,9 +443,17 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
   // in every sense, and is never restricted.
   const only = new Map<string, string>()
   const origin: Interpretation['origin'] = new Map()
+  const keywords: Keyword[] = []
+  const sources = new Map<string, number[]>()
   // Which typed word, and how far from it, the meanings being bumped right now belong to.
   let from = { word: -1, tier: 0 }
+  // And which keyword that is. Unlike `from`, this never splits one typed word in two.
+  let key = -1
   const bump = (meaning: string, amount: number, pos?: string) => {
+    if (key >= 0) {
+      const heard = sources.get(meaning) ?? []
+      if (!heard.includes(key)) sources.set(meaning, [...heard, key])
+    }
     const before = weights.get(meaning) ?? 0
     if (amount > before) {
       weights.set(meaning, amount)
@@ -430,7 +474,8 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
   PHRASES.forEach(([phrase, meanings], index) => {
     if (text.includes(` ${phrase} `)) {
       // A phrase is several ideas on purpose — "coffee shop" is drink and hearth — so
-      // each of its meanings counts as a typed word of its own.
+      // each of its meanings counts as a typed word of its own. It is still one keyword.
+      key = keywords.push({ text: phrase, readAs: [] }) - 1
       meanings.forEach((m, i) => {
         from = { word: -1000 - index * 10 - i, tier: 0 }
         bump(m, WEIGHT.direct)
@@ -459,7 +504,12 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
     }
   })
 
+  // Where each read word sits among the keywords, after any phrases.
+  const keyOf = read.map(({ word, own }) =>
+    keywords.push({ text: word, readAs: own ? [] : (WORDS[word] ?? []).slice(0, 3) }) - 1)
+
   read.forEach(({ word, entry, own }, index) => {
+    key = keyOf[index]
     from = { word: index, tier: 0 }
     if (own) bump(word, WEIGHT.direct)
     // "Generation" is filed mostly as an age of people, and was typed as the act of
@@ -482,6 +532,7 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
   const thin = weights.size < ENOUGH
   const recast: Interpretation['recast'] = []
   read.forEach(({ word, entry, own }, index) => {
+    key = keyOf[index]
     const placed = own || Boolean(WORDS[word])
     // "Strong" has roots, but they are all adjectives, and a name needs a noun to stand
     // on. Its kin — strength — are what it would have been asked for as a thing.
@@ -509,6 +560,23 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
       return
     }
     if (placed && !thin && !nounless) return
+    if (!placed) {
+      // No root and no hand-written reading: the word is its kin and nothing else. The
+      // nearest tier that has any stands in for it, and says so on the page.
+      let level = 0
+      entry.near.forEach((tier, depth) => {
+        if (tier.length === 0) return
+        const amount = Math.min(WEIGHT.stand[level], depth === 2 ? WEIGHT.far : 1)
+        from = { word: index, tier: level }
+        tier.forEach((tagged) => {
+          const [meaning, pos] = tagged.split(':')
+          bump(meaning, amount, pos)
+        })
+        if (level === 0) keywords[key].readAs = tier.map((tagged) => tagged.split(':')[0]).slice(0, 3)
+        level += 1
+      })
+      return
+    }
     const scale = placed && !nounless ? WEIGHT.widen : WEIGHT.near
     entry.near.forEach((tier, depth) => {
       const amount = scale[depth]
@@ -524,6 +592,7 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
     for (const meaning of [...weights.keys()]) {
       if (weights.get(meaning)! < WEIGHT.curated) continue
       from = { word: origin.get(meaning)?.word ?? -1, tier: 3 }
+      key = sources.get(meaning)?.[0] ?? -1
       for (const near of NEIGHBOURS[meaning as Concept] ?? []) bump(near, WEIGHT.neighbor)
     }
   }
@@ -547,7 +616,7 @@ export async function interpret(query: string, db: RootDatabase): Promise<Interp
     .sort((a, b) => b[1] - a[1])
     .map(([meaning]) => meaning)
 
-  return { concepts, weights, unmatched, roots: [...roots.values()], recast, kinless, origin }
+  return { concepts, weights, unmatched, roots: [...roots.values()], recast, kinless, origin, keywords, sources }
 }
 
 /** Every meaning the hand-written vocabulary can send a word to. For scripts/battery.ts. */

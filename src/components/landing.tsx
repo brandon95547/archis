@@ -92,13 +92,13 @@ type Example = {
 // these three and fails if any of the names below stops coming back.
 const EXAMPLES: Example[] = [
   {
-    name: 'Leohtsoth',
+    name: 'Phaonta',
     image: '/images/archis-example-ruins.webp',
     alt: 'A colonnaded temple in ruins on a headland at sunset.',
     concepts: ['truth', 'light', 'order'],
-    roots: 'lēoht (light) + sōþ (truth)',
+    roots: 'pháos (light) + ónta (reality, truth, actual objects)',
     meaning: 'Light-truth.',
-    languages: 'Old English',
+    languages: 'Ancient Greek',
   },
   {
     name: 'Mnemarkhe',
@@ -110,13 +110,13 @@ const EXAMPLES: Example[] = [
     languages: 'Ancient Greek',
   },
   {
-    name: 'Krypteurema',
+    name: 'Laugnawita',
     image: '/images/archis-example-right.webp',
     alt: 'A dark stone hall with a shaft of light falling at the far end.',
     concepts: ['hidden knowledge', 'discovery', 'transformation'],
-    roots: 'kryptós (concealed, hidden, secret) + heúrēma (invention, discovery)',
-    meaning: 'Hidden discovery.',
-    languages: 'Ancient Greek',
+    roots: '*laugnaz (hidden) + *witą (knowledge)',
+    meaning: 'Hidden knowledge.',
+    languages: 'Proto-Germanic',
   },
 ]
 

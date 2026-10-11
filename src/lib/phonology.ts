@@ -149,6 +149,48 @@ export function harshness(word: string): number {
   return score
 }
 
+/**
+ * Onsets that are legal here and still make an English reader hesitate: they are how the
+ * source language is transliterated, not how English starts a syllable.
+ */
+const HARD_ONSETS = new Set(['dh', 'zh', 'gh', 'ts', 'ps', 'sv', 'jn', 'sr', 'vr', 'khr'])
+
+/** What an English reader closes a syllable on without thinking about it. */
+const EASY_CODAS = new Set([
+  '', 'b', 'c', 'd', 'f', 'g', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'x', 'z', 'th', 'sh', 'ph', 'ch',
+  'nd', 'nt', 'ng', 'nk', 'nc', 'mp', 'ms', 'ns', 'st', 'sk', 'sp', 'ft', 'ct', 'pt', 'ks', 'ps', 'ts',
+  'ld', 'lt', 'lf', 'lk', 'lm', 'lp', 'ls', 'rd', 'rt', 'rn', 'rm', 'rk', 'rl', 'rp', 'rs', 'rf', 'rg', 'rb', 'rc',
+  'nth', 'rth', 'lth', 'rst', 'nst', 'rsh', 'lsh', 'rch', 'nch', 'lch',
+])
+
+/** Vowel pairs English has no settled way to say. "ae", "eo" and "iu" are not among them. */
+const ODD_VOWELS = new Set(['aa', 'ii', 'uu', 'yy', 'iy', 'yi'])
+
+/**
+ * How many times a reader will stop to work out how a name is said.
+ *
+ * `harshness` counts consonants that crowd. This counts something else: the places where
+ * the spelling is faithful to its language and foreign to the eye — the "ht" of Old
+ * English leoht, a syllable that closes on "h", a word that opens on "mn". None of these
+ * is wrong, and a name is not rejected for them; it is ranked below one that can be read
+ * straight off, because a name has to be said before it can be remembered.
+ */
+export function stumbles(word: string): number {
+  const syllables = syllabify(word.toLowerCase())
+  let count = 0
+  syllables.forEach((syllable, index) => {
+    const last = index === syllables.length - 1
+    if (!LEGAL_ONSETS.has(syllable.onset)) count += 1
+    else if (HARD_ONSETS.has(syllable.onset)) count += 0.5
+    // A final "h" after a vowel is how Hebrew names end in English — Sarah, Hannah. An
+    // "h" closing a syllable anywhere else (tyht, leoht) is the hardest thing here to say.
+    if (!EASY_CODAS.has(syllable.coda) && !(last && syllable.coda === 'h')) count += syllable.coda.startsWith('h') ? 2 : 1
+    if (ODD_VOWELS.has(syllable.nucleus)) count += 0.5
+  })
+  if (/q(?!u)/.test(word)) count += 0.5
+  return count
+}
+
 /** Share of units that are vowels — a crude but reliable measure of flow. */
 export function vowelRatio(word: string): number {
   const parts = units(word.toLowerCase())

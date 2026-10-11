@@ -31,8 +31,10 @@ npx jiti scripts/battery.ts "wolf, night" # the names for one query, with their 
 ```
 
 The battery exits non-zero if a query goes unread or comes back with no names, if one root
-keeps answering unrelated queries, or if a worked example on the landing page is no longer
-what the engine returns. Run it after touching the reader, the engine or the database.
+keeps answering unrelated queries, if a worked example on the landing page is no longer
+what the engine returns, if a word of a four-word search goes unanswered or the order of
+the words changes the page, or if "More names" miscounts what is on screen. Run it after
+touching the reader, the engine or the database.
 
 ## How a name is made
 
@@ -54,6 +56,14 @@ A word that none of the three can read is reported on the page and contributes n
 of ideas — truth, knowledge, origin, light, memory — whenever it did not know a word, and
 it knew about three hundred. `wolf`, `coffee shop` and `love` all returned the same nine
 names about knowing, which from the outside is a search box that ignores you.
+
+**The words of a search are equals, and each is its own source.** `piano, music,
+education, teach` is four things asked for, not one subject with three modifiers. A name
+answers any one of them or joins two; nothing requires a name — or a language — to
+cover them all, and the order they are typed in changes nothing. A word no old language
+has (`piano`) is read through its nearest kin (harp, lute, music) at the same weight as a
+word that has roots of its own, and the page says what it was read as. A word that was
+read and still appears in no name is named on the page too.
 
 A query too thin to blend — one word, or two that mean much the same — widens along the
 thesaurus at a lower weight, so the thing actually asked for still leads.
@@ -125,10 +135,29 @@ many vowels; two roots that mean the same thing; and anything scoring under a fi
 **A weak name is left out rather than shown** — a search can come back with four names
 instead of nine, and the page says so.
 
-Ranked on: how directly the roots answer what was asked, whether a second dictionary
-confirms them, requested length, sound and era, and how the name lands. The page is then
-spread across languages — two names from any one language before a third — with the
-invented languages last, together.
+Ranked on how the name is said and kept, and on how well it answers:
+
+- *Pronunciation* — consonants that crowd, and spellings a reader has to stop and work
+  out (a syllable closing on "h", a word opening on "mn"). `stumbles` in
+  `src/lib/phonology.ts`.
+- *Elegance* — the balance of vowels to consonants, how the name lands, and the requested
+  sound and era.
+- *Memorability* — the requested length, three syllables over four, and a cost for every
+  letter past nine.
+- *Relevance* — the **average** strength of the roots, not their sum, plus whether a
+  second dictionary confirms them. A name on one root that means exactly what was typed
+  is as relevant as a compound of two; ranking by the sum is what used to put every
+  thirteen-letter compound above every good short name.
+
+The page is then built one name at a time (`spread` in `localNameService.ts`). The typed
+words take turns, least-heard first, so each gets its share; and a name's score is
+marked down for what the page already has — the same language, root, meaning, ending or
+reading. Those are prices, not limits, so a search only two languages can answer still
+fills. The invented languages come last, together.
+
+"More names" asks for the next page of the same search. The languages above the grid are
+counted from every name on screen (`src/lib/traditions.ts`), and when the search has
+nothing left the page says so rather than reporting a failure.
 
 ## Invented languages
 

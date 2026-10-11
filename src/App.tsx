@@ -2,7 +2,9 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { Bookmark, Plus } from 'lucide-react'
 import type { GeneratedName, GenerationResult, Refinements } from './types'
 import { createNameService } from './services'
+import { appendPage } from './services/pages'
 import { languageName } from './data/languages'
+import { traditions } from './lib/traditions'
 import { useFavorites } from './hooks/useFavorites'
 import { useCopy } from './hooks/useCopy'
 import { SearchBar } from './components/SearchBar'
@@ -69,11 +71,7 @@ export default function App() {
       try {
         const next = await service.generate({ query: text, refinements: nextRefinements, exclude })
         if (latest.current !== token) return
-        setResult(
-          exclude.length > 0 && result
-            ? { ...next, names: [...result.names, ...next.names] }
-            : next,
-        )
+        setResult(exclude.length > 0 && result ? appendPage(result, next) : next)
       } catch (cause) {
         if (latest.current !== token) return
         setError(cause instanceof Error ? cause.message : 'The name service could not be reached.')
@@ -108,6 +106,10 @@ export default function App() {
   }, [refinements, result, run])
 
   const hasSearched = Boolean(result) || busy
+
+  // Counted from the names on screen, whichever service produced them, so the line above
+  // the grid cannot say something the grid does not.
+  const languages = useMemo(() => traditions(result?.names ?? []), [result])
 
   return (
     <div className="min-h-screen">
@@ -264,11 +266,13 @@ export default function App() {
             <>
               <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <p className="text-base text-ink-300">
-                  <span className="text-ink-300">{result.names.length}</span> names from{' '}
-                  <span className="text-ink-300">{result.languages.length}</span> traditions
-                  {result.languages.length > 0 && (
+                  <span className="text-ink-300">{result.names.length}</span>{' '}
+                  {result.names.length === 1 ? 'name' : 'names'} from{' '}
+                  <span className="text-ink-300">{languages.length}</span>{' '}
+                  {languages.length === 1 ? 'tradition' : 'traditions'}
+                  {languages.length > 0 && (
                     <span className="hidden sm:inline">
-                      {' '}— {result.languages.map(languageName).join(', ')}
+                      {' '}— {languages.map(languageName).join(', ')}
                     </span>
                   )}
                 </p>

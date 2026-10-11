@@ -14,6 +14,10 @@
  *   · each language's joining rule still reproduces the real word it is modelled on
  *   · the worked examples on the landing page are still what the engine returns
  *   · the hand-written vocabulary points only at meanings that have roots
+ *   · the words of a search are equals: each is answered, none has to share a name or a
+ *     language with the others, and the order they are typed in changes nothing
+ *   · "More names" never repeats a name, never miscounts the languages on the page, and
+ *     ends by saying the search is exhausted rather than that it failed
  *
  * A query that comes back with fewer names than asked for is reported and is not a
  * failure: a weak name is supposed to be left out.
@@ -21,10 +25,12 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { LocalNameService } from '../src/services/localNameService'
+import { appendPage } from '../src/services/pages'
+import { traditions } from '../src/lib/traditions'
 import { CONCEPTS, CURATED_TARGETS } from '../src/data/concepts'
 import { RootDatabase, type Shard } from '../src/data/roots'
 import { compounds, derivations } from '../src/lib/formation'
-import type { Root } from '../src/types'
+import type { GenerationResult, Root } from '../src/types'
 
 const generated = fileURLToPath(new URL('../src/data/generated/', import.meta.url))
 const load = async (index: number): Promise<Shard> =>
@@ -148,9 +154,9 @@ for (const [expected, first, second] of RULES) {
 // The worked examples on the landing page (src/components/landing.tsx) say they are what
 // the engine returns for the query on the card. This is what keeps that true.
 const LANDING: [string, string][] = [
-  ['truth, light, order', 'Leohtsoth'],
+  ['truth, light, order', 'Phaonta'],
   ['wisdom, memory, origin', 'Mnemarkhe'],
-  ['hidden knowledge, discovery, transformation', 'Krypteurema'],
+  ['hidden knowledge, discovery, transformation', 'Laugnawita'],
 ]
 for (const [query, name] of LANDING) {
   // The cards were captured with the defaults, whatever this run was asked to use.
@@ -171,6 +177,69 @@ const dead = CURATED_TARGETS.filter(
 if (dead.length > 0) {
   failures += 1
   console.log(`FAIL: the vocabulary points at meanings with no roots: ${dead.join(', ')}`)
+}
+
+// The words of a search are equals, and each is its own source of names.
+//
+// This is the search the rule was written on. No ancient language has a word for a piano,
+// "teach" is a verb, and no one language has roots for all four — which is fine, because
+// nothing asks one to. What must hold: every word is answered by some name, every name
+// sits inside a single language, the page is a mix of languages and of single roots and
+// joined ones, and typing the words in another order returns the same page.
+const fail = (message: string) => {
+  failures += 1
+  console.log(`FAIL: ${message}`)
+}
+const EQUALS = ['piano', 'music', 'education', 'teach']
+const ANSWERS: Record<string, string[]> = {
+  piano: ['harp', 'lute'],
+  music: ['music'],
+  education: ['education', 'teacher', 'instruction'],
+  teach: ['teacher', 'instruction'],
+}
+const plain = { ...refinements, mix: false }
+const page = await service.generate({ query: EQUALS.join(', '), refinements: plain })
+if (page.names.length < plain.count) fail(`"${EQUALS.join(', ')}" filled ${page.names.length} of ${plain.count} names.`)
+for (const word of EQUALS) {
+  const answered = page.names.some((n) => n.roots.some((u) => u.root.concepts.some((c) => ANSWERS[word].includes(c))))
+  if (!answered) fail(`no name for "${EQUALS.join(', ')}" draws on "${word}".`)
+}
+if (/No name here draws on/.test(page.notice ?? '')) fail(`a word of "${EQUALS.join(', ')}" went unanswered: ${page.notice}`)
+const strays = page.names.filter((n) => !n.language || n.roots.some((u) => u.root.language !== n.language))
+if (strays.length > 0) fail(`with one language per name, ${strays.map((n) => n.name).join(', ')} mixed languages.`)
+if (page.languages.length < 5) fail(`"${EQUALS.join(', ')}" drew on only ${page.languages.length} languages.`)
+if (!page.names.some((n) => n.roots.length === 1) || !page.names.some((n) => n.roots.length === 2)) {
+  fail(`"${EQUALS.join(', ')}" should show both single roots and joined ones.`)
+}
+const orders = (words: string[]): string[][] => words.length <= 1
+  ? [words]
+  : words.flatMap((word, i) => orders([...words.slice(0, i), ...words.slice(i + 1)]).map((rest) => [word, ...rest]))
+for (const mixed of [false, true]) {
+  const pages = new Set<string>()
+  for (const order of orders(EQUALS)) {
+    const out = await service.generate({ query: order.join(', '), refinements: { ...refinements, mix: mixed } })
+    if (out.names.length === 0) fail(`"${order.join(', ')}" returned nothing${mixed ? ' with languages mixed' : ''}.`)
+    pages.add(out.names.map((n) => n.name).sort().join(' '))
+  }
+  if (pages.size > 1) fail(`the order of the words changed the page for "${EQUALS.join(', ')}"${mixed ? ' with languages mixed' : ''}: ${pages.size} different pages.`)
+}
+
+// "More names", pressed until there are none. The count of languages above the grid is a
+// claim about everything in it — it once read "39 names from 0 traditions" — and running
+// out is reported as running out.
+let shown: GenerationResult = page
+for (let presses = 0; presses < 40; presses += 1) {
+  const next = await service.generate({ query: EQUALS.join(', '), refinements: plain, exclude: shown.names.map((n) => n.name) })
+  shown = appendPage(shown, next)
+  if (new Set(shown.names.map((n) => n.name)).size !== shown.names.length) fail('"More names" repeated a name.')
+  if (shown.languages.length === 0 || shown.languages.length !== traditions(shown.names).length) {
+    fail(`"More names" reports ${shown.languages.length} languages for ${shown.names.length} names.`)
+  }
+  if (next.names.length === 0) {
+    if (!/every name this search makes/.test(next.notice ?? '')) fail(`out of names, the page says: ${next.notice}`)
+    break
+  }
+  if (presses === 39) fail('"More names" never ran out.')
 }
 
 console.log(failures === 0 ? '\nAll read, all answered.' : `\n${failures} problem(s).`)
